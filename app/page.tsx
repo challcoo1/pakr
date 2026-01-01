@@ -4,33 +4,45 @@ import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function Home() {
-  const [query, setQuery] = useState('');
+  const [objective, setObjective] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (query.trim()) {
-      router.push(`/chat?q=${encodeURIComponent(query.trim())}`);
-    }
+    if (!objective.trim()) return;
+
+    setIsLoading(true);
+    router.push(`/analyze?trip=${encodeURIComponent(objective.trim())}`);
   };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6">
-      <div className="w-full max-w-xl text-center">
-        <h1 className="logo mb-12">pakr</h1>
-
-        <p className="prompt-text">What's your objective?</p>
+      <div className="w-full max-w-md">
+        <h1 className="logo text-center mb-12">pakr</h1>
 
         <form onSubmit={handleSubmit}>
+          <label className="block mb-2 text-sm font-medium">
+            What's your objective?
+          </label>
+
           <input
             type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Overland Track in October..."
-            className="main-input"
+            value={objective}
+            onChange={(e) => setObjective(e.target.value)}
+            placeholder="e.g. Overland Track in October"
+            className="input-field mb-4"
             autoFocus
             autoComplete="off"
           />
+
+          <button
+            type="submit"
+            disabled={!objective.trim() || isLoading}
+            className="btn-primary w-full"
+          >
+            {isLoading ? 'Analyzing...' : 'Analyze'}
+          </button>
         </form>
       </div>
     </div>
