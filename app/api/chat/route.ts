@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
+// app/api/chat/route.ts
+
+import { NextResponse } from 'next/server';
+import OpenAI from 'openai';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-
-const anthropic = new Anthropic();
 
 // Load the trip analysis skill
 function loadTripAnalysisSkill(): string {
@@ -17,7 +17,7 @@ function loadTripAnalysisSkill(): string {
 
 const TRIP_ANALYSIS_SKILL = loadTripAnalysisSkill();
 
-const SYSTEM_PROMPT = `You are pakr, a gear gap analyzer.
+const SYSTEM_PROMPT = `You are pakr, a gear gap analyzer for serious outdoor people.
 
 You have access to this trip analysis skill:
 
@@ -36,48 +36,57 @@ OUTPUT FORMAT:
 
 CRITICAL: When analyzing a trip, you MUST output valid JSON matching the skill schema. Start with { and end with }. No markdown code fences.`;
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     const { message, history } = await request.json();
 
-    // Build conversation history
-    const messages: Array<{role: 'user' | 'assistant', content: string}> = [];
+    if (!message || typeof message !== 'string') {
+      return NextResponse.json({ error: 'Invalid message' }, { status: 400 });
+    }
 
-    if (history && history.length > 0) {
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY!,
+      organization: process.env.OPENAI_ORG_ID
+    });
+
+    // Build messages array
+    const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+      { role: 'system', content: SYSTEM_PROMPT }
+    ];
+
+    // Add history
+    if (history && Array.isArray(history)) {
       for (const msg of history) {
         messages.push({
           role: msg.role,
-          content: msg.content,
+          content: msg.content
         });
       }
     }
 
-    messages.push({
-      role: 'user',
-      content: message,
-    });
+    // Add current message
+    messages.push({ role: 'user', content: message });
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
-      system: SYSTEM_PROMPT,
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
       messages,
+      temperature: 0.7,
+      max_tokens: 2000
     });
 
-    const textContent = response.content.find(c => c.type === 'text');
-    const rawContent = textContent ? textContent.text : '';
+    const rawContent = response.choices[0]?.message?.content;
+    if (!rawContent) {
+      throw new Error('No response from AI');
+    }
 
     // Try to parse as JSON (trip analysis response)
     let tripData = null;
     let displayContent = rawContent;
 
     try {
-      // Check if response is JSON
       const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         tripData = JSON.parse(jsonMatch[0]);
-
-        // Format display content from structured data
         displayContent = formatTripAnalysis(tripData);
       }
     } catch {
@@ -86,13 +95,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       content: displayContent,
-      tripData,
+      tripData
     });
+
   } catch (error) {
-    console.error('Chat API error:', error);
+    console.error('Chat error:', error);
     return NextResponse.json({
-      content: 'Error. Check ANTHROPIC_API_KEY.',
-    });
+      content: 'Error. Check OPENAI_API_KEY.'
+    }, { status: 500 });
   }
 }
 
@@ -202,18 +212,13 @@ function formatSpecs(requirements?: Record<string, string | string[] | boolean>)
   if (!requirements) return '';
 
   const specs: string[] = [];
-  for (const [key, value] of Object.entries(requirements)) {
+  for (const [, value] of Object.entries(requirements)) {
     if (typeof value === 'boolean') continue;
     if (Array.isArray(value)) {
       specs.push(value.join(', '));
     } else {
-      // Skip verbose keys, just show value
-      if (key.includes('_')) {
-        specs.push(String(value));
-      } else {
-        specs.push(String(value));
-      }
+      specs.push(String(value));
     }
   }
-  return specs.slice(0, 3).join(', '); // Limit to 3 specs per line
+  return specs.slice(0, 3).join(', ');
 }

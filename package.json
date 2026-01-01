@@ -13,12 +13,12 @@
     "db:migrate": "tsx scripts/migrate.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.71.2",
     "@neondatabase/serverless": "^1.0.2",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
     "lucide-react": "^0.511.0",
     "next": "^15.5.7",
+    "openai": "^6.15.0",
     "pg": "^8.16.3",
     "react": "18.2.0",
     "react-dom": "18.2.0"
