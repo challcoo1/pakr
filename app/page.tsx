@@ -61,43 +61,48 @@ export default function Home() {
     }
   };
 
-  const handleGearInput = async (item: string, value: string) => {
+  // Just update the input value - no validation
+  const handleGearChange = (item: string, value: string) => {
     setUserGear(prev => ({
       ...prev,
       [item]: { ...prev[item], input: value }
     }));
+  };
 
-    // Validate after user stops typing (debounced in real app)
-    if (value.trim()) {
-      const requirement = trip?.gear.find(g => g.item === item);
-      if (requirement) {
-        try {
-          const response = await fetch('/api/validate-gear', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userGear: value.trim(),
-              requirement: requirement
-            }),
-          });
-          const data = await response.json();
-          setUserGear(prev => ({
-            ...prev,
-            [item]: {
-              input: value,
-              status: data.status || 'empty',
-              reasons: data.reasons || []
-            }
-          }));
-        } catch {
-          // Validation failed, keep as is
-        }
-      }
-    } else {
+  // Validate on blur or Enter
+  const handleGearValidate = async (item: string) => {
+    const entry = userGear[item];
+    if (!entry?.input.trim()) {
       setUserGear(prev => ({
         ...prev,
         [item]: { input: '', status: 'empty', reasons: [] }
       }));
+      return;
+    }
+
+    const requirement = trip?.gear.find(g => g.item === item);
+    if (!requirement) return;
+
+    try {
+      const response = await fetch('/api/validate-gear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userGear: entry.input.trim(),
+          requirement: requirement
+        }),
+      });
+      const data = await response.json();
+      setUserGear(prev => ({
+        ...prev,
+        [item]: {
+          input: prev[item].input,
+          status: data.status || 'empty',
+          reasons: data.reasons || []
+        }
+      }));
+    } catch {
+      // Validation failed, keep as is
     }
   };
 
@@ -186,7 +191,9 @@ export default function Home() {
                         <input
                           type="text"
                           value={entry.input}
-                          onChange={(e) => handleGearInput(g.item, e.target.value)}
+                          onChange={(e) => handleGearChange(g.item, e.target.value)}
+                          onBlur={() => handleGearValidate(g.item)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleGearValidate(g.item)}
                           placeholder="What do you have?"
                           className="input-small"
                         />
