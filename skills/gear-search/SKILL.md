@@ -30,12 +30,14 @@ Return EVERY product that matches the query. Be exhaustive:
 - All models in the product line (Norvan LD, Norvan SL, Norvan VT)
 - All current versions (Norvan LD 4, not just "Norvan LD")
 - All variants (GTX vs non-GTX, Men's vs Women's if relevant)
+- **All color options** - include each colorway as a separate result
 - Include the FULL product name as it appears on the manufacturer site
 
-**IMPORTANT:** Use complete, current product names:
-- "Arc'teryx Norvan LD 4 GTX Shoe" NOT just "Norvan LD"
-- "Osprey Atmos AG 65 Pack" NOT just "Atmos"
-- Include version numbers when they exist
+**IMPORTANT:** Use complete, current product names WITH COLOR:
+- "Arc'teryx Norvan LD 4 GTX Shoe - Stone Green"
+- "Arc'teryx Norvan LD 4 GTX Shoe - Black"
+- "Osprey Atmos AG 65 Pack - Mythical Green"
+- Include version numbers AND colors when they exist
 
 ### Step 3: Differentiate
 For each match, identify KEY specs that distinguish it from similar products:
@@ -82,9 +84,11 @@ Return 2-6 matching products, ordered by relevance:
 ### Query: "norvan shoes"
 ```json
 [
-  {"name": "Arc'teryx Norvan LD 4 GTX Shoe", "brand": "Arc'teryx", "specs": "Long distance, Gore-Tex, 315g, cushioned"},
-  {"name": "Arc'teryx Norvan SL 3 Shoe", "brand": "Arc'teryx", "specs": "Superlight, no waterproofing, 215g, racing"},
-  {"name": "Arc'teryx Norvan VT 2 Shoe", "brand": "Arc'teryx", "specs": "Vertical terrain, sticky rubber, 290g, technical"}
+  {"name": "Arc'teryx Norvan LD 4 GTX Shoe - Stone Green", "brand": "Arc'teryx", "specs": "Long distance, Gore-Tex, 315g, cushioned"},
+  {"name": "Arc'teryx Norvan LD 4 GTX Shoe - Black", "brand": "Arc'teryx", "specs": "Long distance, Gore-Tex, 315g, cushioned"},
+  {"name": "Arc'teryx Norvan SL 3 Shoe - Daybreak", "brand": "Arc'teryx", "specs": "Superlight, 215g, racing"},
+  {"name": "Arc'teryx Norvan SL 3 Shoe - Black", "brand": "Arc'teryx", "specs": "Superlight, 215g, racing"},
+  {"name": "Arc'teryx Norvan VT 2 Shoe - Black", "brand": "Arc'teryx", "specs": "Vertical terrain, sticky rubber, 290g, technical"}
 ]
 ```
 
