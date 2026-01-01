@@ -62,7 +62,7 @@ export default function Home() {
   const [exactSpecs, setExactSpecs] = useState(false);
   const [gearSearch, setGearSearch] = useState<Record<string, GearSearchState>>({});
 
-  // Step 1: Search for matching trips
+  // Analyze trip - search first, then get gear requirements
   const handleAnalyze = async (e: FormEvent) => {
     e.preventDefault();
     if (!objective.trim() || isLoading) return;
@@ -75,59 +75,78 @@ export default function Home() {
     setUserGear({});
 
     try {
-      const response = await fetch('/api/search-trip', {
+      // Step 1: Search for trip to get deep context
+      const searchResponse = await fetch('/api/search-trip', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: objective.trim() }),
       });
+      const searchData = await searchResponse.json();
 
-      const data = await response.json();
-      if (data.results && data.results.length > 0) {
-        if (data.results.length === 1) {
-          // Single match - auto-select
-          await handleSelectTrip(data.results[0]);
-        } else {
-          // Multiple matches - show options
-          setTripResults(data.results);
-          setShowTripResults(true);
-          setIsLoading(false);
-        }
-      } else {
+      // If multiple matches, let user choose
+      if (searchData.results && searchData.results.length > 1) {
+        setTripResults(searchData.results);
+        setShowTripResults(true);
         setIsLoading(false);
+        return;
+      }
+
+      // Get deep context if we have a match
+      const tripContext = searchData.results?.[0] || null;
+
+      // Step 2: Analyze trip for gear requirements
+      const analyzeResponse = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ objective: objective.trim() }),
+      });
+      const analyzeData = await analyzeResponse.json();
+
+      if (analyzeData.trip) {
+        // Merge deep context if we have it
+        setTrip({
+          ...analyzeData.trip,
+          difficulty: tripContext?.difficulty || '',
+          terrain: tripContext?.terrain || '',
+          hazards: tripContext?.hazards || '',
+        });
+        setSelectedTrip(tripContext);
+
+        const initial: Record<string, UserGearEntry> = {};
+        analyzeData.trip.gear.forEach((g: GearRequirement) => {
+          initial[g.item] = { input: '', status: 'empty', reasons: [] };
+        });
+        setUserGear(initial);
       }
     } catch (error) {
-      console.error('Trip search failed:', error);
+      console.error('Analysis failed:', error);
+    } finally {
       setIsLoading(false);
     }
   };
 
-  // Step 2: User selects trip, analyze gear requirements
+  // User selects from multiple trip options
   const handleSelectTrip = async (tripMatch: TripMatch) => {
-    setSelectedTrip(tripMatch);
     setShowTripResults(false);
     setIsLoading(true);
 
     try {
-      // Analyze with deep trip context
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          objective: tripMatch.name,
-          tripContext: tripMatch  // Pass full context
-        }),
+        body: JSON.stringify({ objective: tripMatch.name }),
       });
 
       const data = await response.json();
       if (data.trip) {
-        // Merge deep context into trip
         setTrip({
           ...data.trip,
           difficulty: tripMatch.difficulty,
           terrain: tripMatch.terrain,
           hazards: tripMatch.hazards,
         });
-        // Initialize empty user gear entries
+        setSelectedTrip(tripMatch);
+
         const initial: Record<string, UserGearEntry> = {};
         data.trip.gear.forEach((g: GearRequirement) => {
           initial[g.item] = { input: '', status: 'empty', reasons: [] };
