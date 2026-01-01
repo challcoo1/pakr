@@ -130,3 +130,163 @@ body::before {
   background: rgba(0, 0, 0, 0.15);
   border-radius: 3px;
 }
+
+/* Gear Comparison - Two Column Layout */
+.gear-comparison {
+  margin-top: 1rem;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.gear-section {
+  margin-bottom: 1.5rem;
+}
+
+.gear-section:last-child {
+  margin-bottom: 0;
+}
+
+.gear-section-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.gear-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.gear-row:last-child {
+  border-bottom: none;
+}
+
+/* Left column: Requirement */
+.gear-requirement {
+  color: var(--charcoal);
+}
+
+.gear-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.gear-specs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.gear-spec {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* Right column: User's gear match */
+.gear-match {
+  text-align: right;
+}
+
+.gear-add-btn {
+  font-size: 0.8rem;
+  color: var(--burnt);
+  background: none;
+  border: 1px dashed var(--burnt);
+  padding: 0.35rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.gear-add-btn:hover {
+  background: rgba(204, 85, 0, 0.1);
+}
+
+/* Gear status display */
+.gear-status {
+  text-align: left;
+}
+
+.gear-status-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.status-indicator {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.gear-match-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--charcoal);
+}
+
+.gear-manufacturer {
+  color: var(--muted);
+  margin-right: 0.25rem;
+}
+
+.gear-status-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-left: 1.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.gear-status-reasons {
+  margin-left: 1.5rem;
+}
+
+.gear-reason {
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* Inline gear status (for chat bubbles) */
+.gear-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.gear-inline:last-child {
+  border-bottom: none;
+}
+
+.gear-inline-name {
+  font-weight: 500;
+}
+
+.gear-inline-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.gear-inline-reasons {
+  width: 100%;
+  font-size: 0.75rem;
+  opacity: 0.8;
+  margin-left: 1.5rem;
+}
