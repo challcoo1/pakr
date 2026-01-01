@@ -149,10 +149,9 @@ body {
 /* Gear table */
 .gear-table {
   width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border: 2px solid var(--charcoal);
-  border-radius: 4px;
+  border-collapse: separate;
+  border-spacing: 0 0.5rem;
+  background: transparent;
 }
 
 .gear-table th {
@@ -165,18 +164,34 @@ body {
   color: white;
 }
 
+.gear-table th:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.gear-table th:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
 .gear-table td {
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid #e5e5e5;
+  background: var(--cream);
+  border-top: 1px solid rgba(0,0,0,0.1);
+  border-bottom: 1px solid rgba(0,0,0,0.1);
   vertical-align: top;
 }
 
-.gear-table tr:last-child td {
-  border-bottom: none;
+.gear-table td:first-child {
+  border-left: 1px solid rgba(0,0,0,0.1);
+  border-radius: 4px 0 0 4px;
+}
+
+.gear-table td:last-child {
+  border-right: 1px solid rgba(0,0,0,0.1);
+  border-radius: 0 4px 4px 0;
 }
 
 .gear-table tr.critical td {
-  background: #fff8f0;
+  border-left-color: var(--burnt);
 }
 
 .gear-table tr.critical td:first-child {
