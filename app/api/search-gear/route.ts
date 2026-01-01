@@ -25,13 +25,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ results: [] });
     }
 
-    const contextHint = category ? `Category context: ${category}` : '';
+    // Build prompt with category as primary filter
+    const prompt = category
+      ? `Category: "${category}"\nQuery: "${query.trim()}"\n\nONLY return ${category} products. Do not return other gear types.`
+      : `Query: "${query.trim()}"`;
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
         { role: 'system', content: GEAR_SEARCH_SKILL },
-        { role: 'user', content: `${contextHint}\n\nSearch: "${query.trim()}"` }
+        { role: 'user', content: prompt }
       ],
       temperature: 0.3,
       max_tokens: 800,

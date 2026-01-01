@@ -193,7 +193,7 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           query: entry.input.trim(),
-          category: requirement?.category
+          category: item  // Use the requirement item name as the category filter
         }),
       });
       const data = await response.json();
@@ -293,6 +293,40 @@ export default function Home() {
     }));
   };
 
+  // Recommend gear for a requirement
+  const handleRecommend = async (item: string) => {
+    setGearSearch(prev => ({
+      ...prev,
+      [item]: { isSearching: true, results: [], showResults: true }
+    }));
+
+    try {
+      const response = await fetch('/api/search-gear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: item,  // Search for the requirement type itself
+          category: item
+        }),
+      });
+      const data = await response.json();
+
+      setGearSearch(prev => ({
+        ...prev,
+        [item]: {
+          isSearching: false,
+          results: data.results || [],
+          showResults: true
+        }
+      }));
+    } catch {
+      setGearSearch(prev => ({
+        ...prev,
+        [item]: { isSearching: false, results: [], showResults: false }
+      }));
+    }
+  };
+
   const getStatusIndicator = (status: string) => {
     switch (status) {
       case 'ideal': return { icon: '●', color: '#2C5530', label: 'Ideal' };
@@ -323,21 +357,30 @@ export default function Home() {
               </button>
             </label>
           </div>
-          <form onSubmit={handleAnalyze} className="flex gap-3">
+          <form onSubmit={handleAnalyze} className="relative">
             <input
               type="text"
               value={objective}
               onChange={(e) => setObjective(e.target.value)}
-              placeholder="What's your objective? e.g. Overland Track in October"
-              className="input-field flex-1"
+              placeholder="Where are you going? e.g. Overland Track in October"
+              className="input-field w-full pr-10"
               autoFocus
             />
             <button
               type="submit"
               disabled={!objective.trim() || isLoading}
-              className="btn-primary whitespace-nowrap"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-charcoal disabled:opacity-30"
             >
-              {isLoading ? 'Analyzing...' : 'Analyze'}
+              {isLoading ? (
+                <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              )}
             </button>
           </form>
         </div>
@@ -401,6 +444,7 @@ export default function Home() {
                   <th className="text-left">Required</th>
                   <th className="text-left">You Have</th>
                   <th className="text-center w-20">Status</th>
+                  <th className="w-24"></th>
                 </tr>
               </thead>
               <tbody>
@@ -460,6 +504,16 @@ export default function Home() {
                         <span style={{ color: status.color, fontSize: '1.25rem' }}>
                           {status.icon}
                         </span>
+                      </td>
+                      <td className="text-right">
+                        {entry.status === 'empty' && (
+                          <button
+                            onClick={() => handleRecommend(g.item)}
+                            className="text-xs text-muted hover:text-burnt underline"
+                          >
+                            Recommend
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );

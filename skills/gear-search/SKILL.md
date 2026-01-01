@@ -8,13 +8,19 @@ Identify all matching outdoor gear products from a user's search query. Returns 
 
 ## INPUT
 
-Search query with optional category context.
+Search query WITH required category context.
 
 ```
-"arcteryx beta jacket"
-"osprey pack 65L"
-"msr tent"
+Category: "Sun hat"
+Query: "craghoppers"
+→ Only return Craghoppers HATS, not trousers or jackets
+
+Category: "Rain jacket"
+Query: "arcteryx"
+→ Only return Arc'teryx JACKETS, not shoes or packs
 ```
+
+**CRITICAL: The category tells you what type of gear the user needs. ONLY return products that match that category.**
 
 ## PROCESS
 
@@ -73,15 +79,25 @@ Return 2-6 matching products, ordered by relevance:
 
 ## RULES
 
-1. **Multiple matches required** - If query could match 2+ products, return all
-2. **Be specific** - Don't return generic categories, return actual products
-3. **Differentiate clearly** - Specs should highlight what makes each option different
-4. **Max 6 results** - Keep list manageable
-5. **Order by relevance** - Most likely match first
+1. **FILTER BY CATEGORY** - If category says "Sun hat", ONLY return hats. Never return trousers, jackets, or other gear types.
+2. **Multiple matches required** - If query could match 2+ products in the category, return all
+3. **Be specific** - Don't return generic categories, return actual products
+4. **Differentiate clearly** - Specs should highlight what makes each option different
+5. **Max 6 results** - Keep list manageable
+6. **Order by relevance** - Most likely match first
 
 ## EXAMPLES
 
-### Query: "norvan shoes"
+### Category: "Sun hat", Query: "craghoppers"
+```json
+[
+  {"name": "Craghoppers NosiLife Sun Hat", "brand": "Craghoppers", "specs": "UPF 50+, insect repellent, wide brim"},
+  {"name": "Craghoppers NosiLife Desert Hat", "brand": "Craghoppers", "specs": "UPF 40+, neck flap, ventilated"}
+]
+```
+**NOT** trousers, jackets, or shirts - only hats because category is "Sun hat"
+
+### Category: "Footwear", Query: "norvan"
 ```json
 [
   {"name": "Arc'teryx Norvan LD 4 GTX Shoe - Stone Green", "brand": "Arc'teryx", "specs": "Long distance, Gore-Tex, 315g, cushioned"},

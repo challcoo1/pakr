@@ -30,6 +30,14 @@ body {
   color: var(--muted);
 }
 
+.text-burnt {
+  color: var(--burnt);
+}
+
+.hover\:text-burnt:hover {
+  color: var(--burnt);
+}
+
 .bg-forest {
   background-color: var(--forest);
 }
@@ -159,21 +167,14 @@ body {
 }
 
 .gear-table th {
-  padding: 0.75rem 1rem;
-  font-size: 0.75rem;
-  font-weight: 600;
+  padding: 0.5rem 1rem;
+  font-size: 0.7rem;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  background: var(--charcoal);
-  color: white;
-}
-
-.gear-table th:first-child {
-  border-radius: 4px 0 0 4px;
-}
-
-.gear-table th:last-child {
-  border-radius: 0 4px 4px 0;
+  color: var(--muted);
+  background: transparent;
+  border-bottom: 1px solid rgba(0,0,0,0.1);
 }
 
 .gear-table td {
