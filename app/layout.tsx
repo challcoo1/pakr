@@ -2,26 +2,20 @@ import "@/app/globals.css";
 import { ReactNode } from "react";
 
 export const metadata = {
-  title: "Pakr",
-  description: "Pakr application",
+  title: "pakr — Your personal expedition outfitter",
+  description: "Pack smart. Travel light. Your AI-powered gear companion for outdoor adventures.",
 };
 
 interface LayoutProps {
   children: ReactNode;
 }
 
-const Layout = ({ children }: LayoutProps) => {
+export default function Layout({ children }: LayoutProps) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors">
-        <div className="min-h-screen flex flex-col">
-          <div className="flex-1">
-            {children}
-          </div>
-        </div>
+    <html lang="en">
+      <body>
+        {children}
       </body>
     </html>
   );
-};
-
-export default Layout;
+}

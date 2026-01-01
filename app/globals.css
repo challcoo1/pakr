@@ -2,42 +2,170 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --cream: #F5F1E8;
+  --cream-dark: #E8E4DB;
+  --burnt-orange: #CC5500;
+  --burnt-orange-dark: #A34400;
+  --forest: #2C5530;
+  --forest-light: #3D7344;
+  --charcoal: #2B2B2B;
+  --charcoal-light: #4A4A4A;
+}
+
 body {
-  font-family: 'Roboto', sans-serif;
-  @apply text-gray-900;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: var(--cream);
+  color: var(--charcoal);
+  line-height: 1.6;
 }
 
+/* Paper texture overlay */
+.paper-texture {
+  background-color: var(--cream);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+}
+
+/* Typography */
 h1, h2, h3, h4, h5, h6 {
-  @apply text-gray-950;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--charcoal);
 }
 
-p {
-  @apply text-gray-900;
+.logo {
+  font-weight: 300;
+  letter-spacing: 0.3em;
+  text-transform: lowercase;
 }
 
-small, .text-secondary {
-  @apply text-gray-700;
-}
-
+/* Catalog-style components */
 @layer components {
-  .touch-target {
-    @apply min-w-[44px] min-h-[44px] inline-flex items-center justify-center;
+  .catalog-input {
+    @apply w-full px-0 py-3 bg-transparent border-0 border-b-2 text-xl;
+    border-color: var(--charcoal);
+    caret-color: var(--burnt-orange);
   }
 
-  .touch-target-icon {
-    @apply min-w-[44px] min-h-[44px] flex items-center justify-center;
+  .catalog-input:focus {
+    @apply outline-none;
+    border-color: var(--burnt-orange);
+  }
+
+  .catalog-input::placeholder {
+    color: var(--charcoal-light);
+    opacity: 0.6;
+  }
+
+  .catalog-button {
+    @apply px-6 py-3 font-medium tracking-wide uppercase text-sm;
+    background-color: var(--forest);
+    color: var(--cream);
+    transition: background-color 0.2s ease;
+  }
+
+  .catalog-button:hover {
+    background-color: var(--forest-light);
+  }
+
+  .catalog-card {
+    @apply p-6;
+    background-color: var(--cream);
+    border: 1px solid var(--charcoal);
+  }
+
+  .catalog-tag {
+    @apply inline-block px-2 py-1 text-xs uppercase tracking-wider;
+    background-color: var(--cream-dark);
+    color: var(--charcoal-light);
+  }
+
+  .catalog-divider {
+    @apply my-8;
+    border-top: 1px solid var(--charcoal);
+    opacity: 0.2;
+  }
+
+  /* Message bubbles */
+  .message-user {
+    @apply max-w-[80%] ml-auto p-4;
+    background-color: var(--cream-dark);
+    border: 1px solid rgba(43, 43, 43, 0.1);
+  }
+
+  .message-system {
+    @apply max-w-[85%] p-4;
+    background-color: transparent;
+    border-left: 3px solid var(--forest);
+  }
+
+  /* Gear card */
+  .gear-card {
+    @apply p-5 transition-all duration-200;
+    background-color: var(--cream);
+    border: 1px solid rgba(43, 43, 43, 0.15);
+  }
+
+  .gear-card:hover {
+    border-color: var(--burnt-orange);
+  }
+
+  /* Priority badges */
+  .priority-critical {
+    color: var(--burnt-orange);
+  }
+
+  .priority-recommended {
+    color: var(--forest);
+  }
+
+  .priority-optional {
+    color: var(--charcoal-light);
   }
 }
 
+/* Typewriter cursor effect */
+.typewriter-cursor::after {
+  content: '|';
+  animation: blink 1s step-end infinite;
+  color: var(--burnt-orange);
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* Subtle fade-in */
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Form inputs */
 input[type="text"],
 input[type="email"],
 input[type="password"],
-input[type="number"],
 input[type="search"],
-input[type="tel"],
-input[type="url"],
-input[type="date"],
-textarea,
-select {
+textarea {
   font-size: 16px;
+  background-color: transparent;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--cream);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--charcoal-light);
+  opacity: 0.3;
 }
