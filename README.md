@@ -1,2 +1,0 @@
-# pakr
-Equipment optimiser
