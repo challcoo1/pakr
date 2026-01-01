@@ -22,6 +22,22 @@ Query: "arcteryx"
 
 **CRITICAL: The category tells you what type of gear the user needs. ONLY return products that match that category.**
 
+## CATEGORY MAPPING
+
+Interpret requirement categories broadly:
+
+| Requirement | Includes |
+|-------------|----------|
+| Hiking boots | Boots, trail runners, approach shoes, hiking shoes - ALL footwear |
+| Footwear | All shoes and boots |
+| Rain jacket | Hardshells, rain shells, waterproof jackets |
+| Shell jacket | Hardshells, softshells, rain jackets |
+| Sun hat | Sun hats, caps, wide-brim hats |
+| Backpack | Packs of any size |
+| Sleeping bag | Sleeping bags, quilts |
+
+**When in doubt, include the product if it could reasonably fulfill the requirement.**
+
 ## PROCESS
 
 ### Step 1: Parse Query
@@ -97,7 +113,8 @@ Return 2-6 matching products, ordered by relevance:
 ```
 **NOT** trousers, jackets, or shirts - only hats because category is "Sun hat"
 
-### Category: "Footwear", Query: "norvan"
+### Category: "Hiking boots", Query: "norvan"
+(Hiking boots includes trail runners, so Norvan shoes are valid results)
 ```json
 [
   {"name": "Arc'teryx Norvan LD 4 GTX Shoe - Stone Green", "brand": "Arc'teryx", "specs": "Long distance, Gore-Tex, 315g, cushioned"},
