@@ -9,17 +9,33 @@ interface GearRequirement {
   priority: 'critical' | 'recommended' | 'optional';
 }
 
+// Deep trip context from search
+interface TripMatch {
+  name: string;
+  location: string;
+  difficulty: string;
+  duration: string;
+  distance: string;
+  terrain: string;
+  elevation: string;
+  hazards: string;
+  summary: string;
+}
+
 interface TripAnalysis {
   name: string;
   region: string;
   duration: string;
+  difficulty: string;
+  terrain: string;
+  hazards: string;
   conditions: string[];
   gear: GearRequirement[];
 }
 
 interface UserGearEntry {
   input: string;
-  status: 'suitable' | 'marginal' | 'unsuitable' | 'empty';
+  status: 'ideal' | 'suitable' | 'adequate' | 'unsuitable' | 'empty';
   reasons: string[];
 }
 
@@ -38,29 +54,79 @@ interface GearSearchState {
 export default function Home() {
   const [objective, setObjective] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [tripResults, setTripResults] = useState<TripMatch[]>([]);
+  const [showTripResults, setShowTripResults] = useState(false);
+  const [selectedTrip, setSelectedTrip] = useState<TripMatch | null>(null);
   const [trip, setTrip] = useState<TripAnalysis | null>(null);
   const [userGear, setUserGear] = useState<Record<string, UserGearEntry>>({});
   const [exactSpecs, setExactSpecs] = useState(false);
   const [gearSearch, setGearSearch] = useState<Record<string, GearSearchState>>({});
 
+  // Step 1: Search for matching trips
   const handleAnalyze = async (e: FormEvent) => {
     e.preventDefault();
     if (!objective.trim() || isLoading) return;
 
     setIsLoading(true);
     setTrip(null);
+    setSelectedTrip(null);
+    setTripResults([]);
+    setShowTripResults(false);
     setUserGear({});
 
     try {
+      const response = await fetch('/api/search-trip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: objective.trim() }),
+      });
+
+      const data = await response.json();
+      if (data.results && data.results.length > 0) {
+        if (data.results.length === 1) {
+          // Single match - auto-select
+          await handleSelectTrip(data.results[0]);
+        } else {
+          // Multiple matches - show options
+          setTripResults(data.results);
+          setShowTripResults(true);
+          setIsLoading(false);
+        }
+      } else {
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error('Trip search failed:', error);
+      setIsLoading(false);
+    }
+  };
+
+  // Step 2: User selects trip, analyze gear requirements
+  const handleSelectTrip = async (tripMatch: TripMatch) => {
+    setSelectedTrip(tripMatch);
+    setShowTripResults(false);
+    setIsLoading(true);
+
+    try {
+      // Analyze with deep trip context
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ objective: objective.trim() }),
+        body: JSON.stringify({
+          objective: tripMatch.name,
+          tripContext: tripMatch  // Pass full context
+        }),
       });
 
       const data = await response.json();
       if (data.trip) {
-        setTrip(data.trip);
+        // Merge deep context into trip
+        setTrip({
+          ...data.trip,
+          difficulty: tripMatch.difficulty,
+          terrain: tripMatch.terrain,
+          hazards: tripMatch.hazards,
+        });
         // Initialize empty user gear entries
         const initial: Record<string, UserGearEntry> = {};
         data.trip.gear.forEach((g: GearRequirement) => {
@@ -145,7 +211,7 @@ export default function Home() {
     await validateGear(item, product.name);
   };
 
-  // Core validation function
+  // Core validation function - pass deep trip context
   const validateGear = async (item: string, gearText: string) => {
     const requirement = trip?.gear.find(g => g.item === item);
     if (!requirement) return;
@@ -161,6 +227,9 @@ export default function Home() {
             name: trip.name,
             region: trip.region,
             duration: trip.duration,
+            difficulty: trip.difficulty,
+            terrain: trip.terrain,
+            hazards: trip.hazards,
             conditions: trip.conditions
           } : null
         }),
@@ -207,8 +276,9 @@ export default function Home() {
 
   const getStatusIndicator = (status: string) => {
     switch (status) {
+      case 'ideal': return { icon: '●', color: '#2C5530', label: 'Ideal' };
       case 'suitable': return { icon: '●', color: '#2C5530', label: 'Good' };
-      case 'marginal': return { icon: '◐', color: '#CC5500', label: 'Check' };
+      case 'adequate': return { icon: '◐', color: '#CC5500', label: 'OK' };
       case 'unsuitable': return { icon: '○', color: '#2B2B2B', label: 'No' };
       default: return { icon: '–', color: '#6B6B6B', label: '' };
     }
@@ -258,16 +328,46 @@ export default function Home() {
       <main className="max-w-4xl mx-auto p-4">
         {isLoading && (
           <div className="text-center py-12 text-muted">
-            Analyzing trip requirements...
+            {showTripResults ? 'Searching trips...' : 'Analyzing trip requirements...'}
           </div>
         )}
 
-        {trip && !isLoading && (
+        {/* Trip Selection - multiple matches */}
+        {showTripResults && tripResults.length > 0 && !isLoading && (
+          <div className="space-y-3">
+            <p className="text-muted text-sm">Which trip do you mean?</p>
+            {tripResults.map((t, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleSelectTrip(t)}
+                className="w-full text-left p-4 bg-white border-2 border-charcoal rounded hover:border-burnt transition-colors"
+              >
+                <div className="font-bold">{t.name}</div>
+                <div className="text-sm text-muted">{t.location}</div>
+                <div className="text-sm mt-1">{t.duration} · {t.difficulty} · {t.distance}</div>
+                <div className="text-xs text-muted mt-1">{t.summary}</div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {trip && !isLoading && !showTripResults && (
           <>
             {/* Trip Summary */}
             <div className="trip-summary mb-6">
               <h2 className="text-xl font-bold mb-2">{trip.name}</h2>
               <p className="text-muted">{trip.region} · {trip.duration}</p>
+              {trip.difficulty && (
+                <p className="text-sm mt-1">
+                  <span className="font-medium">Difficulty:</span> {trip.difficulty} ·
+                  <span className="font-medium ml-2">Terrain:</span> {trip.terrain}
+                </p>
+              )}
+              {trip.hazards && (
+                <p className="text-sm text-muted mt-1">
+                  <span className="font-medium">Hazards:</span> {trip.hazards}
+                </p>
+              )}
               <div className="flex flex-wrap gap-2 mt-2">
                 {trip.conditions.map((c, i) => (
                   <span key={i} className="condition-tag">{c}</span>

@@ -25,13 +25,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ status: 'empty', reasons: [] });
     }
 
-    // Build comprehensive context
+    // Build comprehensive context with deep trip understanding
     const contextParts: string[] = [];
 
     if (tripContext) {
       contextParts.push(`TRIP: ${tripContext.name}`);
       if (tripContext.region) contextParts.push(`Location: ${tripContext.region}`);
       if (tripContext.duration) contextParts.push(`Duration: ${tripContext.duration}`);
+      if (tripContext.difficulty) contextParts.push(`Difficulty: ${tripContext.difficulty}`);
+      if (tripContext.terrain) contextParts.push(`Terrain: ${tripContext.terrain}`);
+      if (tripContext.hazards) contextParts.push(`Hazards: ${tripContext.hazards}`);
       if (tripContext.conditions?.length) {
         contextParts.push(`Conditions: ${tripContext.conditions.join(', ')}`);
       }
@@ -39,12 +42,9 @@ export async function POST(request: Request) {
 
     const prompt = `${contextParts.join('\n')}
 
-REQUIREMENT: ${requirement.item}
-Specs suggested: ${requirement.specs || 'not specified'}
-
 USER HAS: "${userGear}"
 
-Is this gear appropriate for this specific trip? Think holistically.`;
+Can they do ${tripContext?.name || 'this trip'} in ${userGear}? Answer like a friend asking.`;
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',

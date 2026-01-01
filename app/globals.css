@@ -194,10 +194,18 @@ body {
   border-radius: 0 4px 4px 0;
 }
 
-.gear-table tr.critical td {
-  border-left-color: var(--burnt);
+.gear-table tr.critical td:first-child {
+  position: relative;
+  border-left: 1px solid rgba(0,0,0,0.1);
 }
 
-.gear-table tr.critical td:first-child {
-  border-left: 3px solid var(--burnt);
+.gear-table tr.critical td:first-child::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--burnt);
+  border-radius: 4px 0 0 4px;
 }

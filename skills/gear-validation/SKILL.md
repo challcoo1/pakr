@@ -2,7 +2,11 @@
 
 ## PURPOSE
 
-Validate whether a user's gear is appropriate for a specific trip. Uses holistic, context-aware thinking like an experienced outdoor guide - not mechanical spec comparison.
+Answer a simple question: **Will this gear work for this trip?**
+
+Ignore what the "requirement" suggests. Just evaluate the gear against the actual trip.
+
+Think like answering a friend who asks: "Can I do [trip] in [gear]?"
 
 **Target execution time:** 3-5 seconds
 
@@ -11,87 +15,127 @@ Validate whether a user's gear is appropriate for a specific trip. Uses holistic
 ```json
 {
   "trip": {
-    "name": "Overland Track",
-    "region": "Tasmania",
-    "duration": "6 days",
-    "conditions": ["rain likely", "mud", "remote"]
+    "name": "Platypus Trail",
+    "region": "Blue Mountains",
+    "duration": "4 hours",
+    "conditions": ["maintained trail", "mild weather"]
   },
   "requirement": {
-    "item": "Hiking boots",
-    "specs": "Waterproof, ankle support"
+    "item": "Hiking boots",  // IGNORE THIS
+    "specs": "Waterproof"    // IGNORE THIS
   },
-  "userGear": "Altra Lone Peak trail runners"
+  "userGear": "Arc'teryx Norvan LD 4 GTX"
 }
 ```
 
+**The requirement is just a suggestion. Evaluate the GEAR against the TRIP, not against the requirement.**
+
+## VALIDATION TIERS
+
+Use these four tiers - be generous, not conservative:
+
+| Status | Icon | Meaning |
+|--------|------|---------|
+| `ideal` | ● | Exceeds requirements - perfect choice |
+| `suitable` | ● | Meets requirements - no upgrade needed |
+| `adequate` | ◐ | Will work fine - upgrade optional, not necessary |
+| `unsuitable` | ○ | Don't use this - safety concern or won't work |
+
+**CRITICAL:** Most gear that "works" should be `suitable`, not `adequate`.
+Only use `adequate` when there's a genuine (not theoretical) limitation.
+
 ## PROCESS
 
-### Step 1: Understand Trip Context
+### Step 1: Match Gear to Trip Difficulty
 
-**Trip Difficulty:**
-- Maintained trail with signs → lightweight gear is fine
-- Off-trail scrambling → need sturdier gear
-- Technical alpine → specific safety gear required
+**Easy day hikes (maintained trails, 2-6 hours, mild weather):**
+- Trail runners = SUITABLE (not adequate!)
+- Light hikers = SUITABLE
+- Approach shoes = SUITABLE
+- Heavy boots = IDEAL (overkill but fine)
 
-**Duration:**
-- Day hike (4-8 hours) → minimal requirements
-- Overnight → shelter, sleep system matter
-- Multi-day → durability, capacity, comfort important
+**Multi-day treks (variable terrain, weather exposure):**
+- Trail runners = ADEQUATE (will work, boots optional)
+- Hiking boots = SUITABLE
+- Mountaineering boots = IDEAL (overkill)
 
-**Conditions:**
-- Mild weather → wide gear tolerance
-- Rain likely → waterproofing important
-- Extreme cold → specific ratings matter
-- Remote/no bailout → reliability critical
+**Technical alpine (glacier, scrambling, exposure):**
+- Trail runners = UNSUITABLE
+- Hiking boots = ADEQUATE (depends on conditions)
+- Mountaineering boots = SUITABLE
 
-### Step 2: Understand Gear Interactions
+### Step 2: Consider Context, Not Specs
 
-Consider the full picture:
-- Has water filter → doesn't need to carry 3L, refill points work
-- Ultralight tent → fine for fair weather, risky in storms
-- Trail runners → great for maintained trails, risky on scree/snow
+Don't compare specs mechanically. Ask: "Would I tell a friend this gear is fine?"
 
-### Step 3: Make Practical Judgment
+- Requirement says "boots" but trip is easy day hike → trail runners are SUITABLE
+- Requirement says "3L water" but user has 1L + filter → SUITABLE
+- Requirement says "waterproof" but forecast is sunny → non-waterproof is SUITABLE
 
-Think like a real outdoor guide, not a liability-conscious rental shop:
-- Real hikers often use lighter gear than guidebooks suggest
-- Personal preference matters for non-safety items
-- Only flag "unsuitable" for genuine safety concerns
+### Step 3: Reserve Upgrades for Real Benefits
+
+Only suggest `adequate` (upgrade optional) when:
+- There's a genuine comfort/performance difference (not theoretical)
+- The upgrade would meaningfully improve the experience
+- It's NOT just "guidebook says X but Y also works"
 
 ## OUTPUT
 
 ```json
 {
-  "status": "suitable" | "marginal" | "unsuitable",
+  "status": "ideal" | "suitable" | "adequate" | "unsuitable",
   "reason": "One clear sentence explaining your thinking"
 }
 ```
 
 ## EXAMPLES
 
-### Example 1: Easy Day Hike
-**Trip:** "Platypus Trail day hike" (maintained trail, 4 hours, mild)
-**Requirement:** "2-3L water capacity"
-**User has:** "1L bottle + Sawyer filter"
+### Example 1: Trail Runners on Easy Day Hike
+**Trip:** "Platypus Trail" (maintained trail, 4 hours, dry conditions)
+**Requirement:** "Hiking boots"
+**User has:** "Arc'teryx Norvan LD 4 GTX"
 ```json
 {
   "status": "suitable",
-  "reason": "With filter and water sources on trail, 1L is plenty. Can refill."
+  "reason": "Trail runners are perfect for maintained day hikes - lightweight and comfortable."
 }
 ```
+**NOT** adequate. This is the right choice for this trip.
 
-### Example 2: Multi-day Trek
+### Example 2: Trail Runners on Multi-day Trek
 **Trip:** "Overland Track" (6 days, mud, rain, remote)
 **Requirement:** "Hiking boots"
 **User has:** "Altra Lone Peak trail runners"
 ```json
 {
-  "status": "marginal",
-  "reason": "Many people do Overland in trail runners, but boots give better ankle support in mud. Personal preference."
+  "status": "adequate",
+  "reason": "Many hikers do Overland in trail runners successfully. Boots give more ankle support in deep mud if you prefer."
 }
 ```
 
-### Example 3: Technical Alpine
+### Example 3: Perfect Match
+**Trip:** "Overland Track" (6 days, mud, rain, remote)
+**Requirement:** "Hiking boots"
+**User has:** "Salomon X Ultra 4 GTX"
+```json
+{
+  "status": "suitable",
+  "reason": "Waterproof hiking boots with good ankle support - exactly what this trek needs."
+}
+```
+
+### Example 4: Overkill (Still Good)
+**Trip:** "Platypus Trail" (maintained trail, 4 hours, dry)
+**Requirement:** "Day pack"
+**User has:** "Osprey Atmos AG 65"
+```json
+{
+  "status": "ideal",
+  "reason": "Way more pack than needed for a day hike, but it'll work great."
+}
+```
+
+### Example 5: Safety Issue
 **Trip:** "Mt Blanc" (glacier, altitude, technical)
 **Requirement:** "Mountaineering boots"
 **User has:** "Salomon hiking boots"
@@ -102,32 +146,21 @@ Think like a real outdoor guide, not a liability-conscious rental shop:
 }
 ```
 
-### Example 4: Ultralight Setup
-**Trip:** "John Muir Trail" (3 weeks, summer, established trail)
-**Requirement:** "60L+ backpack"
-**User has:** "Gossamer Gear Mariposa 60"
+### Example 6: Smart Alternative
+**Trip:** "Larapinta Trail" (6 days, desert, water scarce)
+**Requirement:** "4L water capacity"
+**User has:** "2L bladder + Sawyer Squeeze"
 ```json
 {
   "status": "suitable",
-  "reason": "60L ultralight pack is perfect for thru-hiking with resupply points."
-}
-```
-
-### Example 5: Cold Weather
-**Trip:** "Torres del Paine W Trek" (5 days, Patagonia, wind/rain)
-**Requirement:** "0°C sleeping bag"
-**User has:** "10°C summer bag"
-```json
-{
-  "status": "unsuitable",
-  "reason": "Patagonia nights can drop below freezing. 10°C bag risks hypothermia."
+  "reason": "With a filter and known water sources, 2L carrying capacity is plenty."
 }
 ```
 
 ## RULES
 
-1. **Be practical** - Real hikers often use lighter/simpler gear than "required"
-2. **Context is everything** - Same gear can be suitable or unsuitable depending on trip
-3. **Only unsuitable for safety** - Mark unsuitable only if genuine safety concern or gear simply won't work
-4. **One sentence reasons** - Keep explanations clear and concise
-5. **Consider alternatives** - If gear works differently than expected (filter instead of capacity), it can still be suitable
+1. **Be generous** - If it works, it's suitable. Reserve adequate for genuine limitations.
+2. **Match to actual trip** - Easy day hike? Almost anything works. Technical alpine? Be specific.
+3. **Unsuitable = safety only** - Only for genuine safety concerns or gear that won't function.
+4. **One sentence reasons** - Clear and concise.
+5. **No theoretical upgrades** - Don't suggest upgrades just because "X is theoretically better than Y."
