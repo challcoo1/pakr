@@ -23,11 +23,25 @@ interface UserGearEntry {
   reasons: string[];
 }
 
+interface ProductMatch {
+  name: string;
+  brand: string;
+  specs: string;
+}
+
+interface GearSearchState {
+  isSearching: boolean;
+  results: ProductMatch[];
+  showResults: boolean;
+}
+
 export default function Home() {
   const [objective, setObjective] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [trip, setTrip] = useState<TripAnalysis | null>(null);
   const [userGear, setUserGear] = useState<Record<string, UserGearEntry>>({});
+  const [exactSpecs, setExactSpecs] = useState(false);
+  const [gearSearch, setGearSearch] = useState<Record<string, GearSearchState>>({});
 
   const handleAnalyze = async (e: FormEvent) => {
     e.preventDefault();
@@ -67,19 +81,72 @@ export default function Home() {
       ...prev,
       [item]: { ...prev[item], input: value }
     }));
+    // Clear any previous search results when typing
+    setGearSearch(prev => ({
+      ...prev,
+      [item]: { isSearching: false, results: [], showResults: false }
+    }));
   };
 
-  // Validate on blur or Enter
-  const handleGearValidate = async (item: string) => {
+  // Search for matching products (exact specs mode)
+  const handleGearSearch = async (item: string) => {
     const entry = userGear[item];
-    if (!entry?.input.trim()) {
-      setUserGear(prev => ({
-        ...prev,
-        [item]: { input: '', status: 'empty', reasons: [] }
-      }));
+    if (!entry?.input.trim() || entry.input.trim().length < 2) {
       return;
     }
 
+    const requirement = trip?.gear.find(g => g.item === item);
+
+    setGearSearch(prev => ({
+      ...prev,
+      [item]: { isSearching: true, results: [], showResults: true }
+    }));
+
+    try {
+      const response = await fetch('/api/search-gear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: entry.input.trim(),
+          category: requirement?.category
+        }),
+      });
+      const data = await response.json();
+
+      setGearSearch(prev => ({
+        ...prev,
+        [item]: {
+          isSearching: false,
+          results: data.results || [],
+          showResults: true
+        }
+      }));
+    } catch {
+      setGearSearch(prev => ({
+        ...prev,
+        [item]: { isSearching: false, results: [], showResults: false }
+      }));
+    }
+  };
+
+  // Select a product from search results
+  const handleSelectProduct = async (item: string, product: ProductMatch) => {
+    // Set the input to the selected product name
+    setUserGear(prev => ({
+      ...prev,
+      [item]: { ...prev[item], input: product.name }
+    }));
+    // Hide search results
+    setGearSearch(prev => ({
+      ...prev,
+      [item]: { ...prev[item], showResults: false }
+    }));
+    // Now validate
+    await validateGear(item, product.name);
+  };
+
+  // Core validation function
+  const validateGear = async (item: string, gearText: string) => {
     const requirement = trip?.gear.find(g => g.item === item);
     if (!requirement) return;
 
@@ -88,7 +155,7 @@ export default function Home() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userGear: entry.input.trim(),
+          userGear: gearText,
           requirement: requirement,
           tripContext: trip ? {
             name: trip.name,
@@ -112,6 +179,32 @@ export default function Home() {
     }
   };
 
+  // Handle blur/Enter - search if exact specs, validate if general
+  const handleGearSubmit = async (item: string) => {
+    const entry = userGear[item];
+    if (!entry?.input.trim()) {
+      setUserGear(prev => ({
+        ...prev,
+        [item]: { input: '', status: 'empty', reasons: [] }
+      }));
+      return;
+    }
+
+    if (exactSpecs) {
+      await handleGearSearch(item);
+    } else {
+      await validateGear(item, entry.input.trim());
+    }
+  };
+
+  // Close search dropdown
+  const handleCloseSearch = (item: string) => {
+    setGearSearch(prev => ({
+      ...prev,
+      [item]: { ...prev[item], showResults: false }
+    }));
+  };
+
   const getStatusIndicator = (status: string) => {
     switch (status) {
       case 'suitable': return { icon: '●', color: '#2C5530', label: 'Good' };
@@ -126,8 +219,20 @@ export default function Home() {
       {/* Header with input - always visible */}
       <header className="sticky top-0 bg-cream border-b-2 border-charcoal p-4 z-10">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-4 mb-4">
+          <div className="flex items-center justify-between mb-4">
             <span className="logo">pakr</span>
+            <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+              <span className="text-muted">{exactSpecs ? 'Exact specs' : 'General'}</span>
+              <button
+                type="button"
+                onClick={() => setExactSpecs(!exactSpecs)}
+                className={`relative w-10 h-5 rounded-full transition-colors ${exactSpecs ? 'bg-forest' : 'bg-gray-300'}`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${exactSpecs ? 'translate-x-5' : ''}`}
+                />
+              </button>
+            </label>
           </div>
           <form onSubmit={handleAnalyze} className="flex gap-3">
             <input
@@ -183,6 +288,7 @@ export default function Home() {
               <tbody>
                 {trip.gear.map((g) => {
                   const entry = userGear[g.item] || { input: '', status: 'empty', reasons: [] };
+                  const search = gearSearch[g.item] || { isSearching: false, results: [], showResults: false };
                   const status = getStatusIndicator(entry.status);
                   const needsAction = entry.status === 'empty' || entry.status === 'unsuitable';
                   const needsUpgrade = entry.status === 'marginal';
@@ -193,17 +299,42 @@ export default function Home() {
                         <div className="font-medium">{g.item}</div>
                         <div className="text-sm text-muted">{g.specs}</div>
                       </td>
-                      <td>
+                      <td className="relative">
                         <input
                           type="text"
                           value={entry.input}
                           onChange={(e) => handleGearChange(g.item, e.target.value)}
-                          onBlur={() => handleGearValidate(g.item)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleGearValidate(g.item)}
-                          placeholder="What do you have?"
+                          onBlur={() => {
+                            // Delay to allow click on results
+                            setTimeout(() => handleCloseSearch(g.item), 200);
+                          }}
+                          onKeyDown={(e) => e.key === 'Enter' && handleGearSubmit(g.item)}
+                          placeholder={exactSpecs ? "Search your gear..." : "What do you have?"}
                           className="input-small"
                         />
-                        {entry.reasons.length > 0 && (
+                        {/* Search results dropdown */}
+                        {search.showResults && (
+                          <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-y-auto">
+                            {search.isSearching ? (
+                              <div className="p-3 text-sm text-muted">Searching...</div>
+                            ) : search.results.length === 0 ? (
+                              <div className="p-3 text-sm text-muted">No matches found</div>
+                            ) : (
+                              search.results.map((product, idx) => (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  onClick={() => handleSelectProduct(g.item, product)}
+                                  className="w-full text-left p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                                >
+                                  <div className="font-medium text-sm">{product.name}</div>
+                                  <div className="text-xs text-muted">{product.specs}</div>
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        )}
+                        {entry.reasons.length > 0 && !search.showResults && (
                           <div className="text-xs text-muted mt-1">
                             {entry.reasons[0]}
                           </div>
