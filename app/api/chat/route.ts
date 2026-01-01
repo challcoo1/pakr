@@ -36,6 +36,95 @@ OUTPUT FORMAT:
 
 CRITICAL: When analyzing a trip, you MUST output valid JSON matching the skill schema. Start with { and end with }. No markdown code fences.`;
 
+// Function definitions for structured extraction
+const functions: OpenAI.Chat.Completions.ChatCompletionCreateParams.Function[] = [
+  {
+    name: 'analyze_trip',
+    description: 'Analyze a trip/objective and generate gear requirements',
+    parameters: {
+      type: 'object',
+      properties: {
+        trip: {
+          type: 'object',
+          properties: {
+            description: { type: 'string', description: 'Original user input' },
+            activity_type: {
+              type: 'string',
+              enum: ['alpine_climbing', 'mountaineering', 'hiking', 'trekking', 'backpacking', 'ski_touring', 'ice_climbing'],
+              description: 'Type of outdoor activity'
+            },
+            location: {
+              type: 'object',
+              properties: {
+                name: { type: 'string', description: 'Specific route or area name' },
+                region: { type: 'string', description: 'Geographic region' },
+                country: { type: 'string', description: 'Country' },
+                altitude_m: { type: 'number', description: 'Maximum altitude in meters' }
+              },
+              required: ['name', 'region', 'country']
+            },
+            season: { type: 'string', description: 'Season or month' },
+            duration_days: { type: 'number', description: 'Trip duration in days' },
+            technical_grade: { type: 'string', description: 'Technical difficulty grade if applicable' }
+          },
+          required: ['description', 'activity_type', 'location']
+        },
+        conditions: {
+          type: 'object',
+          properties: {
+            temperature: {
+              type: 'object',
+              properties: {
+                day_high_c: { type: 'number' },
+                night_low_c: { type: 'number' },
+                summit_c: { type: 'number' }
+              }
+            },
+            hazards: { type: 'array', items: { type: 'string' } },
+            terrain: { type: 'array', items: { type: 'string' } }
+          }
+        },
+        gear_requirements: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              item: { type: 'string', description: 'Gear item name' },
+              category: { type: 'string', description: 'Gear category path' },
+              priority: { type: 'string', enum: ['critical', 'recommended', 'optional'] },
+              requirements: {
+                type: 'object',
+                additionalProperties: { type: 'string' },
+                description: 'Specific specs required'
+              },
+              reasoning: { type: 'string', description: 'Why this item is needed for this trip' }
+            },
+            required: ['item', 'priority']
+          }
+        },
+        notes: { type: 'array', items: { type: 'string' }, description: 'Important trip-specific notes' }
+      },
+      required: ['trip', 'conditions', 'gear_requirements']
+    }
+  },
+  {
+    name: 'ask_clarification',
+    description: 'Ask user for clarification when location or trip details are ambiguous',
+    parameters: {
+      type: 'object',
+      properties: {
+        question: { type: 'string', description: 'Short, direct clarifying question' },
+        options: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Possible options if applicable'
+        }
+      },
+      required: ['question']
+    }
+  }
+];
+
 export async function POST(request: Request) {
   try {
     const { message, history } = await request.json();
@@ -50,7 +139,7 @@ export async function POST(request: Request) {
     });
 
     // Build messages array
-    const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
       { role: 'system', content: SYSTEM_PROMPT }
     ];
 
@@ -68,35 +157,43 @@ export async function POST(request: Request) {
     messages.push({ role: 'user', content: message });
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       messages,
+      functions,
+      function_call: 'auto',
       temperature: 0.7,
-      max_tokens: 2000
+      max_tokens: 4000
     });
 
-    const rawContent = response.choices[0]?.message?.content;
-    if (!rawContent) {
-      throw new Error('No response from AI');
-    }
+    const choice = response.choices[0];
 
-    // Try to parse as JSON (trip analysis response)
-    let tripData = null;
-    let displayContent = rawContent;
+    // Handle function calls
+    if (choice.message.function_call) {
+      const fnName = choice.message.function_call.name;
+      const fnArgs = JSON.parse(choice.message.function_call.arguments);
 
-    try {
-      const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        tripData = JSON.parse(jsonMatch[0]);
-        displayContent = formatTripAnalysis(tripData);
+      if (fnName === 'analyze_trip') {
+        // Structured trip analysis
+        const displayContent = formatTripAnalysis(fnArgs);
+        return NextResponse.json({
+          content: displayContent,
+          tripData: fnArgs
+        });
       }
-    } catch {
-      // Not JSON, use raw content
+
+      if (fnName === 'ask_clarification') {
+        // Clarifying question
+        let content = fnArgs.question;
+        if (fnArgs.options?.length) {
+          content += '\n\nOptions:\n' + fnArgs.options.map((o: string) => `- ${o}`).join('\n');
+        }
+        return NextResponse.json({ content });
+      }
     }
 
-    return NextResponse.json({
-      content: displayContent,
-      tripData
-    });
+    // Regular text response
+    const rawContent = choice.message.content || '';
+    return NextResponse.json({ content: rawContent });
 
   } catch (error) {
     console.error('Chat error:', error);
@@ -110,7 +207,8 @@ function formatTripAnalysis(data: {
   trip?: {
     description?: string;
     activity_type?: string;
-    location?: { name?: string; region?: string; altitude_m?: number };
+    location?: { name?: string; region?: string; country?: string; altitude_m?: number };
+    season?: string;
     duration_days?: number;
     technical_grade?: string;
   };
@@ -122,7 +220,7 @@ function formatTripAnalysis(data: {
   gear_requirements?: Array<{
     item?: string;
     category?: string;
-    requirements?: Record<string, string | string[] | boolean>;
+    requirements?: Record<string, string>;
     reasoning?: string;
     priority?: string;
   }>;
@@ -135,12 +233,14 @@ function formatTripAnalysis(data: {
     const t = data.trip;
     let header = t.location?.name || t.description || 'Trip Analysis';
     if (t.location?.region) header += `, ${t.location.region}`;
-    if (t.location?.altitude_m) header += ` (${t.location.altitude_m}m)`;
+    if (t.location?.country) header += ` (${t.location.country})`;
+    if (t.location?.altitude_m) header += ` · ${t.location.altitude_m}m`;
     lines.push(header);
 
     const meta: string[] = [];
     if (t.activity_type) meta.push(t.activity_type.replace(/_/g, ' '));
     if (t.duration_days) meta.push(`${t.duration_days} days`);
+    if (t.season) meta.push(t.season);
     if (t.technical_grade) meta.push(`grade ${t.technical_grade}`);
     if (meta.length) lines.push(meta.join(' · '));
   }
@@ -208,17 +308,8 @@ function formatTripAnalysis(data: {
   return lines.join('\n');
 }
 
-function formatSpecs(requirements?: Record<string, string | string[] | boolean>): string {
+function formatSpecs(requirements?: Record<string, string>): string {
   if (!requirements) return '';
-
-  const specs: string[] = [];
-  for (const [, value] of Object.entries(requirements)) {
-    if (typeof value === 'boolean') continue;
-    if (Array.isArray(value)) {
-      specs.push(value.join(', '));
-    } else {
-      specs.push(String(value));
-    }
-  }
-  return specs.slice(0, 3).join(', ');
+  const specs = Object.values(requirements).slice(0, 3);
+  return specs.join(', ');
 }
