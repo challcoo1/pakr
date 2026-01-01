@@ -86,20 +86,23 @@ function ChatContent() {
   };
 
   return (
-    <div className="min-h-screen paper-texture flex flex-col">
+    <div className="min-h-screen flex flex-col paper-bg topo-watermark">
       {/* Header */}
-      <header className="px-6 py-4 border-b" style={{ borderColor: 'rgba(43,43,43,0.1)' }}>
-        <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <Link href="/" className="logo text-2xl hover:opacity-70 transition-opacity">
-            p.a.k.r
+      <header className="site-header">
+        <div className="h-full max-w-5xl mx-auto px-6 flex items-center justify-between">
+          <Link href="/" className="logo">
+            pakr
           </Link>
-          <nav className="flex gap-6 text-sm">
+          <nav className="flex gap-8">
             <button
               onClick={() => handleSend('Show my gear')}
-              className="opacity-60 hover:opacity-100 transition-opacity"
+              className="nav-link"
             >
               My Gear
             </button>
+            <Link href="/" className="nav-link">
+              New Trip
+            </Link>
           </nav>
         </div>
       </header>
@@ -108,10 +111,12 @@ function ChatContent() {
       <main className="flex-1 overflow-y-auto px-6 py-8">
         <div className="max-w-3xl mx-auto">
           {messages.length === 0 ? (
-            <div className="text-center py-16 opacity-50">
-              <p className="text-lg mb-4">Ready for your next expedition</p>
-              <p className="text-sm">
-                Tell me where you&apos;re going, or what gear you have
+            <div className="py-16">
+              <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--charcoal)' }}>
+                Ready for your next expedition
+              </h2>
+              <p className="text-sm" style={{ color: 'var(--charcoal-light)' }}>
+                Tell me where you&apos;re headed, or what gear you have.
               </p>
             </div>
           ) : (
@@ -121,7 +126,7 @@ function ChatContent() {
           {/* Loading indicator */}
           {isLoading && (
             <div className="message-system fade-in">
-              <p className="opacity-50">Thinking...</p>
+              <p style={{ color: 'var(--charcoal-light)' }}>Checking records...</p>
             </div>
           )}
 
@@ -130,8 +135,8 @@ function ChatContent() {
       </main>
 
       {/* Input */}
-      <footer className="px-6 py-4 border-t" style={{ borderColor: 'rgba(43,43,43,0.1)' }}>
-        <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
+      <footer className="site-footer">
+        <form onSubmit={handleSubmit} className="max-w-3xl mx-auto px-6">
           <div className="flex gap-4">
             <input
               ref={inputRef}
@@ -139,14 +144,14 @@ function ChatContent() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Type here..."
-              className="catalog-input flex-1"
+              className="form-field flex-1"
               disabled={isLoading}
               autoFocus
             />
             <button
               type="submit"
               disabled={isLoading || !input.trim()}
-              className="catalog-button disabled:opacity-30"
+              className="submit-btn disabled:opacity-30"
             >
               Send
             </button>
@@ -159,8 +164,8 @@ function ChatContent() {
 
 function ChatLoading() {
   return (
-    <div className="min-h-screen paper-texture flex items-center justify-center">
-      <p className="opacity-50">Loading...</p>
+    <div className="min-h-screen paper-bg flex items-center justify-center">
+      <p style={{ color: 'var(--charcoal-light)' }}>Loading...</p>
     </div>
   );
 }
