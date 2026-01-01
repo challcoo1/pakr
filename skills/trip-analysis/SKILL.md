@@ -75,16 +75,14 @@ Build conditions profile from location + season:
 
 **Condition Lookup References:**
 
-| Location Type | Key Considerations |
-|---------------|-------------------|
-| Alps (summer) | Afternoon storms, glacier travel, altitude sickness rare |
-| Alps (winter) | Extreme cold, avalanche, short days |
-| Patagonia | Extreme wind, horizontal rain, unpredictable |
-| Himalayas | Altitude sickness, extreme cold, remote |
-| Tasmania | Horizontal rain, mud, rapid weather change |
-| Scottish Highlands | Wet, windy, navigation challenges |
-| Rockies (summer) | Afternoon lightning, altitude, bears |
-| New Zealand Alps | Glaciers, sandflies, weather windows |
+**Think about real conditions:**
+- What's the weather like in this region at this time of year?
+- Can it rain suddenly? (Most places can - always recommend rain protection)
+- What are the real hazards hikers face here?
+- What do experienced locals actually bring?
+
+**Default to including rain protection** - weather is unpredictable almost everywhere.
+Even a 4-hour day hike can turn dangerous in a sudden downpour.
 
 ### Step 3: Generate Gear Requirements
 
@@ -111,10 +109,11 @@ For each gear category, specify **exact technical requirements** based on condit
 **Priority Logic:**
 - Glacier travel → crampons = critical
 - Rock scrambling → helmet = critical
-- Rain likely → waterproof shell = critical
+- Rain possible → rain jacket = recommended (almost always)
 - Cold nights → warm sleeping bag = critical
 - Long approach → trekking poles = recommended
 - Technical climbing → belay device = critical
+- Outdoors → sun protection = recommended
 
 ## OUTPUT
 
