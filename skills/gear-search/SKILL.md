@@ -25,11 +25,17 @@ Extract:
 - Size/capacity hints
 - Category hints
 
-### Step 2: Identify Matches
-Find ALL products that reasonably match the query:
-- Different models in the same line (Beta AR, Beta LT, Beta SV)
-- Different generations (2023, 2024 versions)
-- Different sizes/capacities if relevant
+### Step 2: Identify ALL Matches
+Return EVERY product that matches the query. Be exhaustive:
+- All models in the product line (Norvan LD, Norvan SL, Norvan VT)
+- All current versions (Norvan LD 4, not just "Norvan LD")
+- All variants (GTX vs non-GTX, Men's vs Women's if relevant)
+- Include the FULL product name as it appears on the manufacturer site
+
+**IMPORTANT:** Use complete, current product names:
+- "Arc'teryx Norvan LD 4 GTX Shoe" NOT just "Norvan LD"
+- "Osprey Atmos AG 65 Pack" NOT just "Atmos"
+- Include version numbers when they exist
 
 ### Step 3: Differentiate
 For each match, identify KEY specs that distinguish it from similar products:
@@ -37,6 +43,7 @@ For each match, identify KEY specs that distinguish it from similar products:
 - Weather rating
 - Capacity
 - Key features
+- Use case (trail running vs hiking vs mountaineering)
 
 ## OUTPUT
 
@@ -72,13 +79,22 @@ Return 2-6 matching products, ordered by relevance:
 
 ## EXAMPLES
 
+### Query: "norvan shoes"
+```json
+[
+  {"name": "Arc'teryx Norvan LD 4 GTX Shoe", "brand": "Arc'teryx", "specs": "Long distance, Gore-Tex, 315g, cushioned"},
+  {"name": "Arc'teryx Norvan SL 3 Shoe", "brand": "Arc'teryx", "specs": "Superlight, no waterproofing, 215g, racing"},
+  {"name": "Arc'teryx Norvan VT 2 Shoe", "brand": "Arc'teryx", "specs": "Vertical terrain, sticky rubber, 290g, technical"}
+]
+```
+
 ### Query: "osprey pack"
 ```json
 [
-  {"name": "Osprey Atmos AG 65", "brand": "Osprey", "specs": "65L, Anti-Gravity suspension, 2.1kg"},
-  {"name": "Osprey Exos 58", "brand": "Osprey", "specs": "58L, ultralight, 1.1kg"},
-  {"name": "Osprey Aether 65", "brand": "Osprey", "specs": "65L, heavy loads, 2.3kg"},
-  {"name": "Osprey Talon 22", "brand": "Osprey", "specs": "22L, daypack, 0.7kg"}
+  {"name": "Osprey Atmos AG 65 Pack", "brand": "Osprey", "specs": "65L, Anti-Gravity suspension, 2.1kg"},
+  {"name": "Osprey Exos 58 Pack", "brand": "Osprey", "specs": "58L, ultralight, 1.1kg"},
+  {"name": "Osprey Aether 65 Pack", "brand": "Osprey", "specs": "65L, heavy loads, 2.3kg"},
+  {"name": "Osprey Talon 22 Pack", "brand": "Osprey", "specs": "22L, daypack, 0.7kg"}
 ]
 ```
 
@@ -93,10 +109,10 @@ Return 2-6 matching products, ordered by relevance:
 ### Query: "down jacket"
 ```json
 [
-  {"name": "Patagonia Down Sweater", "brand": "Patagonia", "specs": "800-fill down, 370g, everyday warmth"},
-  {"name": "Rab Microlight Alpine", "brand": "Rab", "specs": "700-fill down, 350g, lightweight alpine"},
-  {"name": "Mountain Hardwear Ghost Whisperer", "brand": "Mountain Hardwear", "specs": "800-fill down, 220g, ultralight"},
-  {"name": "Arc'teryx Cerium LT", "brand": "Arc'teryx", "specs": "850-fill down, 280g, premium ultralight"}
+  {"name": "Patagonia Down Sweater Hoody", "brand": "Patagonia", "specs": "800-fill down, 370g, everyday warmth"},
+  {"name": "Rab Microlight Alpine Jacket", "brand": "Rab", "specs": "700-fill down, 350g, lightweight alpine"},
+  {"name": "Mountain Hardwear Ghost Whisperer/2 Jacket", "brand": "Mountain Hardwear", "specs": "800-fill down, 220g, ultralight"},
+  {"name": "Arc'teryx Cerium Hoody", "brand": "Arc'teryx", "specs": "850-fill down, 280g, premium ultralight"}
 ]
 ```
 

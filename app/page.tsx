@@ -205,6 +205,41 @@ export default function Home() {
     }));
   };
 
+  // FIND button - search for gear recommendations
+  const handleFindGear = async (item: string, category?: string) => {
+    // Use the requirement item as the search query
+    setGearSearch(prev => ({
+      ...prev,
+      [item]: { isSearching: true, results: [], showResults: true }
+    }));
+
+    try {
+      const response = await fetch('/api/search-gear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: item, // Search for the required item type
+          category: category
+        }),
+      });
+      const data = await response.json();
+
+      setGearSearch(prev => ({
+        ...prev,
+        [item]: {
+          isSearching: false,
+          results: data.results || [],
+          showResults: true
+        }
+      }));
+    } catch {
+      setGearSearch(prev => ({
+        ...prev,
+        [item]: { isSearching: false, results: [], showResults: false }
+      }));
+    }
+  };
+
   const getStatusIndicator = (status: string) => {
     switch (status) {
       case 'suitable': return { icon: '●', color: '#2C5530', label: 'Good' };
@@ -347,10 +382,20 @@ export default function Home() {
                       </td>
                       <td className="text-right">
                         {needsAction && (
-                          <button className="btn-action">FIND</button>
+                          <button
+                            className="btn-action"
+                            onClick={() => handleFindGear(g.item, g.category)}
+                          >
+                            FIND
+                          </button>
                         )}
                         {needsUpgrade && (
-                          <button className="btn-action btn-upgrade">UPGRADE</button>
+                          <button
+                            className="btn-action btn-upgrade"
+                            onClick={() => handleFindGear(g.item, g.category)}
+                          >
+                            UPGRADE
+                          </button>
                         )}
                       </td>
                     </tr>
