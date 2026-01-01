@@ -3,7 +3,6 @@
 import { Suspense } from 'react';
 import { useState, useEffect, useRef, FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
 import { ChatMessages, Message } from '@/components/ChatMessage';
 
 function ChatContent() {
@@ -58,7 +57,6 @@ function ChatContent() {
         role: 'assistant',
         content: data.content,
         gear: data.gear,
-        tripAnalysis: data.tripAnalysis,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -69,7 +67,7 @@ function ChatContent() {
         {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: 'Error processing request. Try again.',
+          content: 'Error. Try again.',
         },
       ]);
     } finally {
@@ -84,39 +82,22 @@ function ChatContent() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col grain">
-      <hr className="rule-orange" />
-
+    <div className="min-h-screen flex flex-col">
       {/* Header */}
-      <header className="px-6 md:px-12 py-4 flex items-center justify-between border-b" style={{ borderColor: 'rgba(0,0,0,0.1)' }}>
-        <Link href="/" className="text-xl font-bold">pakr</Link>
-        <nav className="flex gap-6">
-          <button onClick={() => handleSend('Show my gear')} className="nav-item">
-            My Gear
-          </button>
-          <Link href="/" className="nav-item">
-            New Analysis
-          </Link>
-        </nav>
+      <header className="header">
+        pakr
       </header>
 
       {/* Messages */}
-      <main className="flex-1 overflow-y-auto px-6 md:px-12 py-8">
-        <div className="max-w-2xl">
-          {messages.length === 0 ? (
-            <div className="py-8">
-              <p className="font-semibold mb-2">Ready</p>
-              <p className="text-sm" style={{ color: 'var(--ink-light)' }}>
-                Enter an objective to analyze gear requirements, or log gear you own.
-              </p>
-            </div>
-          ) : (
-            <ChatMessages messages={messages} />
-          )}
+      <main className="flex-1 overflow-y-auto p-4">
+        <div className="max-w-2xl mx-auto">
+          <ChatMessages messages={messages} />
 
           {isLoading && (
-            <div className="message-them fade-in">
-              <p style={{ color: 'var(--ink-light)' }}>Analyzing...</p>
+            <div className="mb-4 flex justify-start">
+              <div className="bubble-system typing">
+                <pre>...</pre>
+              </div>
             </div>
           )}
 
@@ -125,43 +106,27 @@ function ChatContent() {
       </main>
 
       {/* Input */}
-      <footer className="px-6 md:px-12 py-4 border-t" style={{ borderColor: 'rgba(0,0,0,0.1)' }}>
-        <form onSubmit={handleSubmit} className="max-w-2xl flex gap-4">
+      <footer className="p-4 border-t-2" style={{ borderColor: 'var(--ink)' }}>
+        <form onSubmit={handleSubmit} className="max-w-2xl mx-auto">
           <input
             ref={inputRef}
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Describe objective or gear..."
-            className="speak-input flex-1"
+            placeholder="overland track tasmania..."
+            className="chat-input"
             disabled={isLoading}
             autoFocus
           />
-          <button
-            type="submit"
-            disabled={isLoading || !input.trim()}
-            className="text-sm font-semibold uppercase tracking-wide disabled:opacity-30 shrink-0"
-            style={{ color: 'var(--burnt)' }}
-          >
-            Send →
-          </button>
         </form>
       </footer>
     </div>
   );
 }
 
-function ChatLoading() {
-  return (
-    <div className="min-h-screen grain flex items-center justify-center">
-      <p style={{ color: 'var(--ink-light)' }}>Loading...</p>
-    </div>
-  );
-}
-
 export default function ChatPage() {
   return (
-    <Suspense fallback={<ChatLoading />}>
+    <Suspense fallback={<div className="p-4">loading...</div>}>
       <ChatContent />
     </Suspense>
   );

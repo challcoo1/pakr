@@ -1,24 +1,15 @@
-import { GearCard, GearGrid } from './GearCard';
+export interface GearRequirement {
+  name: string;
+  spec: string;
+  required: boolean;
+  owned?: boolean;
+}
 
 export interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  gear?: Array<{
-    name: string;
-    manufacturer: string;
-    category: string;
-    specs?: Record<string, unknown>;
-    priority?: 'critical' | 'recommended' | 'optional';
-    reasoning?: string;
-    requirements?: Record<string, string>;
-    owned?: boolean;
-  }>;
-  tripAnalysis?: {
-    location: string;
-    activity: string;
-    conditions: string[];
-  };
+  gear?: GearRequirement[];
 }
 
 interface ChatMessageProps {
@@ -29,29 +20,23 @@ export function ChatMessage({ message }: ChatMessageProps) {
   const isUser = message.role === 'user';
 
   return (
-    <div className="mb-6 fade-in">
-      {/* Message content */}
-      <div className={isUser ? 'message-you' : 'message-them'}>
-        <p className="whitespace-pre-wrap">{message.content}</p>
+    <div className={`mb-4 flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+      <div className={isUser ? 'bubble-user' : 'bubble-system'}>
+        <pre>{message.content}</pre>
+
+        {message.gear && message.gear.length > 0 && (
+          <div className="gear-list">
+            {message.gear.map((item, i) => (
+              <div key={i} className="gear-item">
+                <span className="gear-name">{item.name}</span>
+                {item.required && <span className="tag-required">required</span>}
+                {item.owned && <span className="tag-owned">owned</span>}
+                <div className="gear-spec">{item.spec}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
-
-      {/* Trip analysis tags */}
-      {message.tripAnalysis && (
-        <div className="mt-3 flex flex-wrap gap-2">
-          <span className="tag">{message.tripAnalysis.activity}</span>
-          <span className="tag-outline">{message.tripAnalysis.location}</span>
-          {message.tripAnalysis.conditions.slice(0, 3).map((condition) => (
-            <span key={condition} className="tag-outline">{condition}</span>
-          ))}
-        </div>
-      )}
-
-      {/* Gear list */}
-      {message.gear && message.gear.length > 0 && (
-        <div className="mt-4">
-          <GearGrid items={message.gear} />
-        </div>
-      )}
     </div>
   );
 }
