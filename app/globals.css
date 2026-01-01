@@ -3,269 +3,240 @@
 @tailwind utilities;
 
 :root {
-  --cream: #F5F1E8;
-  --cream-dark: #E8E0D0;
-  --tan: #D4C9B5;
-  --burnt-orange: #CC5500;
-  --burnt-orange-dark: #A34400;
+  --cream: #F5F0E1;
+  --paper: #EDE6D6;
+  --burnt: #CC5500;
+  --burnt-light: #E86A1A;
   --forest: #2C5530;
-  --forest-light: #3D7344;
-  --charcoal: #2B2B2B;
-  --charcoal-light: #4A4A4A;
-  --brown: #5C4033;
+  --forest-dark: #1E3A22;
+  --ink: #1A1A18;
+  --ink-light: #3D3D38;
+  --brown: #5C4833;
 }
 
+/* Base */
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
   background-color: var(--cream);
-  color: var(--charcoal);
-  line-height: 1.6;
+  color: var(--ink);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Paper texture background */
-.paper-bg {
-  background-color: var(--cream);
-  background-image:
-    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-}
-
-/* Topographic watermark pattern */
-.topo-watermark {
+/* Heavy paper grain texture */
+.grain {
   position: relative;
 }
 
-.topo-watermark::before {
+.grain::before {
   content: '';
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  opacity: 0.03;
+  width: 100%;
+  height: 100%;
+  opacity: 0.4;
   pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 50 Q25 30 50 50 T100 50' fill='none' stroke='%232B2B2B' stroke-width='0.5'/%3E%3Cpath d='M0 60 Q25 40 50 60 T100 60' fill='none' stroke='%232B2B2B' stroke-width='0.5'/%3E%3Cpath d='M0 70 Q25 50 50 70 T100 70' fill='none' stroke='%232B2B2B' stroke-width='0.5'/%3E%3Cpath d='M0 40 Q25 20 50 40 T100 40' fill='none' stroke='%232B2B2B' stroke-width='0.5'/%3E%3Cpath d='M0 30 Q25 10 50 30 T100 30' fill='none' stroke='%232B2B2B' stroke-width='0.5'/%3E%3C/svg%3E");
-  background-size: 200px 200px;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");
 }
 
-/* Header */
-.site-header {
-  height: 60px;
-  background-color: var(--tan);
-  border-bottom: 2px solid var(--brown);
-}
-
-/* Logo */
-.logo {
+/* Typography */
+h1, h2, h3 {
   font-weight: 700;
-  font-size: 1.5rem;
-  letter-spacing: 0;
-  color: var(--charcoal);
-  text-transform: lowercase;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
 }
 
-/* Navigation */
-.nav-link {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--charcoal);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 0.5rem 0;
-  border-bottom: 2px solid transparent;
-  transition: border-color 0.15s ease;
+.display {
+  font-size: clamp(2.5rem, 6vw, 4rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 0.95;
 }
 
-.nav-link:hover {
-  border-color: var(--burnt-orange);
+.subhead {
+  font-size: 0.9rem;
+  font-weight: 400;
+  line-height: 1.6;
+  max-width: 32ch;
 }
 
-/* Form field style */
-.form-field {
-  background-color: rgba(255, 255, 255, 0.5);
-  border: 2px solid var(--brown);
-  padding: 1rem 1.25rem;
-  font-size: 1.125rem;
-  color: var(--charcoal);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+/* Warm underline links */
+a.warm {
+  color: var(--burnt);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
 }
 
-.form-field:focus {
+a.warm:hover {
+  color: var(--burnt-light);
+}
+
+/* Conversational input */
+.speak-input {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid var(--ink);
+  font-size: 1.25rem;
+  padding: 0.75rem 0;
+  width: 100%;
+  color: var(--ink);
+  caret-color: var(--burnt);
+}
+
+.speak-input:focus {
   outline: none;
-  border-color: var(--burnt-orange);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 0 3px rgba(204, 85, 0, 0.1);
+  border-color: var(--burnt);
 }
 
-.form-field::placeholder {
-  color: var(--charcoal-light);
-  opacity: 0.6;
+.speak-input::placeholder {
+  color: var(--ink-light);
+  opacity: 0.5;
 }
 
-/* Form label */
-.form-label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--charcoal-light);
-  margin-bottom: 0.5rem;
-  display: block;
-}
-
-/* Submit button */
-.submit-btn {
+/* Accent block */
+.accent-block {
   background-color: var(--forest);
   color: var(--cream);
-  font-weight: 600;
+  padding: 1.5rem 2rem;
+}
+
+.accent-block a {
+  color: var(--cream);
+  text-decoration: underline;
+}
+
+/* Orange rule */
+.rule-orange {
+  height: 4px;
+  background-color: var(--burnt);
+  border: none;
+}
+
+/* Sidebar info box */
+.info-box {
+  background-color: var(--paper);
+  border-left: 4px solid var(--burnt);
+  padding: 1.25rem 1.5rem;
   font-size: 0.875rem;
+}
+
+/* Small caps utility */
+.small-caps {
+  font-size: 0.7rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 1rem 2rem;
-  border: 2px solid var(--forest);
-  cursor: pointer;
-  transition: background-color 0.15s ease;
+  letter-spacing: 0.12em;
+  color: var(--ink-light);
 }
 
-.submit-btn:hover {
-  background-color: var(--forest-light);
+/* Dense list */
+.dense-list {
+  font-size: 0.875rem;
+  line-height: 1.8;
 }
 
-.submit-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.dense-list li::before {
+  content: '—';
+  margin-right: 0.5rem;
+  color: var(--burnt);
 }
 
-/* Section divider */
-.divider {
-  height: 1px;
-  background-color: var(--brown);
-  opacity: 0.3;
+/* Nav */
+.nav-item {
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+  padding-bottom: 2px;
+  border-bottom: 2px solid transparent;
+}
+
+.nav-item:hover {
+  border-color: var(--burnt);
+}
+
+/* Chat components */
+@layer components {
+  .message-them {
+    background-color: var(--paper);
+    border-left: 3px solid var(--forest);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .message-you {
+    background-color: transparent;
+    border-left: 3px solid var(--burnt);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    margin-left: 2rem;
+  }
+
+  .gear-item {
+    background-color: var(--paper);
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+  }
+
+  .gear-item:last-child {
+    border-bottom: none;
+  }
+
+  .tag {
+    display: inline-block;
+    background-color: var(--forest);
+    color: var(--cream);
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.2rem 0.5rem;
+  }
+
+  .tag-outline {
+    display: inline-block;
+    border: 1px solid var(--ink-light);
+    color: var(--ink-light);
+    font-size: 0.65rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.15rem 0.4rem;
+  }
 }
 
 /* Footer */
-.site-footer {
-  border-top: 1px solid var(--brown);
-  background-color: var(--tan);
-  padding: 1rem 0;
+.footer-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+  font-size: 0.8rem;
+  color: var(--ink-light);
 }
 
-.footer-text {
-  font-size: 0.75rem;
+.footer-grid h4 {
+  font-size: 0.7rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.15em;
-  color: var(--charcoal-light);
+  letter-spacing: 0.1em;
+  margin-bottom: 0.5rem;
+  color: var(--ink);
 }
 
-/* Catalog components */
-@layer components {
-  .catalog-input {
-    @apply w-full px-0 py-3 bg-transparent border-0 border-b-2 text-xl;
-    border-color: var(--charcoal);
-    caret-color: var(--burnt-orange);
-  }
-
-  .catalog-input:focus {
-    @apply outline-none;
-    border-color: var(--burnt-orange);
-  }
-
-  .catalog-input::placeholder {
-    color: var(--charcoal-light);
-    opacity: 0.6;
-  }
-
-  .catalog-button {
-    @apply px-6 py-3 font-semibold tracking-wide uppercase text-sm;
-    background-color: var(--forest);
-    color: var(--cream);
-    transition: background-color 0.2s ease;
-  }
-
-  .catalog-button:hover {
-    background-color: var(--forest-light);
-  }
-
-  .catalog-tag {
-    @apply inline-block px-2 py-1 text-xs uppercase tracking-wider font-medium;
-    background-color: var(--cream-dark);
-    color: var(--charcoal-light);
-    border: 1px solid rgba(92, 64, 51, 0.2);
-  }
-
-  /* Message bubbles */
-  .message-user {
-    @apply max-w-[80%] ml-auto p-4;
-    background-color: var(--cream-dark);
-    border: 1px solid var(--tan);
-  }
-
-  .message-system {
-    @apply max-w-[85%] p-4;
-    background-color: transparent;
-    border-left: 3px solid var(--forest);
-  }
-
-  /* Gear card */
-  .gear-card {
-    @apply p-5 transition-all duration-200;
-    background-color: rgba(255, 255, 255, 0.4);
-    border: 1px solid var(--tan);
-  }
-
-  .gear-card:hover {
-    border-color: var(--burnt-orange);
-  }
-
-  /* Priority badges */
-  .priority-critical {
-    color: var(--burnt-orange);
-    font-weight: 600;
-  }
-
-  .priority-recommended {
-    color: var(--forest);
-    font-weight: 600;
-  }
-
-  .priority-optional {
-    color: var(--charcoal-light);
-  }
-}
-
-/* Mountain illustration SVG styling */
-.mountain-illustration {
-  opacity: 0.15;
-}
-
-/* Fade-in animation */
+/* Fade in */
 .fade-in {
-  animation: fadeIn 0.3s ease-in;
+  animation: fadeIn 0.25s ease-out;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-/* Form inputs */
-input[type="text"],
-input[type="email"],
-input[type="password"],
-input[type="search"],
-textarea {
+/* Inputs */
+input, textarea {
   font-size: 16px;
-}
-
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--cream);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--tan);
-  border: 1px solid var(--brown);
 }

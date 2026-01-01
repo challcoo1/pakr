@@ -17,7 +17,6 @@ function ChatContent() {
   const inputRef = useRef<HTMLInputElement>(null);
   const hasProcessedInitial = useRef(false);
 
-  // Process initial query from URL
   useEffect(() => {
     if (initialQuery && !hasProcessedInitial.current) {
       hasProcessedInitial.current = true;
@@ -25,7 +24,6 @@ function ChatContent() {
     }
   }, [initialQuery]);
 
-  // Scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -71,7 +69,7 @@ function ChatContent() {
         {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: 'Sorry, something went wrong. Please try again.',
+          content: 'Error processing request. Try again.',
         },
       ]);
     } finally {
@@ -86,47 +84,39 @@ function ChatContent() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col paper-bg topo-watermark">
+    <div className="min-h-screen flex flex-col grain">
+      <hr className="rule-orange" />
+
       {/* Header */}
-      <header className="site-header">
-        <div className="h-full max-w-5xl mx-auto px-6 flex items-center justify-between">
-          <Link href="/" className="logo">
-            pakr
+      <header className="px-6 md:px-12 py-4 flex items-center justify-between border-b" style={{ borderColor: 'rgba(0,0,0,0.1)' }}>
+        <Link href="/" className="text-xl font-bold">pakr</Link>
+        <nav className="flex gap-6">
+          <button onClick={() => handleSend('Show my gear')} className="nav-item">
+            My Gear
+          </button>
+          <Link href="/" className="nav-item">
+            New Analysis
           </Link>
-          <nav className="flex gap-8">
-            <button
-              onClick={() => handleSend('Show my gear')}
-              className="nav-link"
-            >
-              My Gear
-            </button>
-            <Link href="/" className="nav-link">
-              New Trip
-            </Link>
-          </nav>
-        </div>
+        </nav>
       </header>
 
       {/* Messages */}
-      <main className="flex-1 overflow-y-auto px-6 py-8">
-        <div className="max-w-3xl mx-auto">
+      <main className="flex-1 overflow-y-auto px-6 md:px-12 py-8">
+        <div className="max-w-2xl">
           {messages.length === 0 ? (
-            <div className="py-16">
-              <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--charcoal)' }}>
-                Ready for your next expedition
-              </h2>
-              <p className="text-sm" style={{ color: 'var(--charcoal-light)' }}>
-                Tell me where you&apos;re headed, or what gear you have.
+            <div className="py-8">
+              <p className="font-semibold mb-2">Ready</p>
+              <p className="text-sm" style={{ color: 'var(--ink-light)' }}>
+                Enter an objective to analyze gear requirements, or log gear you own.
               </p>
             </div>
           ) : (
             <ChatMessages messages={messages} />
           )}
 
-          {/* Loading indicator */}
           {isLoading && (
-            <div className="message-system fade-in">
-              <p style={{ color: 'var(--charcoal-light)' }}>Checking records...</p>
+            <div className="message-them fade-in">
+              <p style={{ color: 'var(--ink-light)' }}>Analyzing...</p>
             </div>
           )}
 
@@ -135,27 +125,26 @@ function ChatContent() {
       </main>
 
       {/* Input */}
-      <footer className="site-footer">
-        <form onSubmit={handleSubmit} className="max-w-3xl mx-auto px-6">
-          <div className="flex gap-4">
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Type here..."
-              className="form-field flex-1"
-              disabled={isLoading}
-              autoFocus
-            />
-            <button
-              type="submit"
-              disabled={isLoading || !input.trim()}
-              className="submit-btn disabled:opacity-30"
-            >
-              Send
-            </button>
-          </div>
+      <footer className="px-6 md:px-12 py-4 border-t" style={{ borderColor: 'rgba(0,0,0,0.1)' }}>
+        <form onSubmit={handleSubmit} className="max-w-2xl flex gap-4">
+          <input
+            ref={inputRef}
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Describe objective or gear..."
+            className="speak-input flex-1"
+            disabled={isLoading}
+            autoFocus
+          />
+          <button
+            type="submit"
+            disabled={isLoading || !input.trim()}
+            className="text-sm font-semibold uppercase tracking-wide disabled:opacity-30 shrink-0"
+            style={{ color: 'var(--burnt)' }}
+          >
+            Send →
+          </button>
         </form>
       </footer>
     </div>
@@ -164,8 +153,8 @@ function ChatContent() {
 
 function ChatLoading() {
   return (
-    <div className="min-h-screen paper-bg flex items-center justify-center">
-      <p style={{ color: 'var(--charcoal-light)' }}>Loading...</p>
+    <div className="min-h-screen grain flex items-center justify-center">
+      <p style={{ color: 'var(--ink-light)' }}>Loading...</p>
     </div>
   );
 }

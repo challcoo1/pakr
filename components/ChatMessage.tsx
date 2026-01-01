@@ -29,36 +29,27 @@ export function ChatMessage({ message }: ChatMessageProps) {
   const isUser = message.role === 'user';
 
   return (
-    <div className={`mb-6 fade-in ${isUser ? 'text-right' : ''}`}>
-      {/* Role indicator */}
-      {!isUser && (
-        <p className="text-xs uppercase tracking-wider opacity-40 mb-2">
-          pakr
-        </p>
-      )}
-
+    <div className="mb-6 fade-in">
       {/* Message content */}
-      <div className={isUser ? 'message-user' : 'message-system'}>
+      <div className={isUser ? 'message-you' : 'message-them'}>
         <p className="whitespace-pre-wrap">{message.content}</p>
       </div>
 
-      {/* Trip analysis header */}
+      {/* Trip analysis tags */}
       {message.tripAnalysis && (
-        <div className="mt-4 mb-4">
-          <div className="flex flex-wrap gap-2">
-            <span className="catalog-tag">{message.tripAnalysis.activity}</span>
-            <span className="catalog-tag">{message.tripAnalysis.location}</span>
-            {message.tripAnalysis.conditions.slice(0, 3).map((condition) => (
-              <span key={condition} className="catalog-tag">{condition}</span>
-            ))}
-          </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <span className="tag">{message.tripAnalysis.activity}</span>
+          <span className="tag-outline">{message.tripAnalysis.location}</span>
+          {message.tripAnalysis.conditions.slice(0, 3).map((condition) => (
+            <span key={condition} className="tag-outline">{condition}</span>
+          ))}
         </div>
       )}
 
-      {/* Gear cards */}
+      {/* Gear list */}
       {message.gear && message.gear.length > 0 && (
         <div className="mt-4">
-          <GearGrid items={message.gear} columns={message.gear.length === 1 ? 1 : 2} />
+          <GearGrid items={message.gear} />
         </div>
       )}
     </div>
@@ -71,7 +62,7 @@ interface ChatMessagesProps {
 
 export function ChatMessages({ messages }: ChatMessagesProps) {
   return (
-    <div className="space-y-2">
+    <div>
       {messages.map((message) => (
         <ChatMessage key={message.id} message={message} />
       ))}
