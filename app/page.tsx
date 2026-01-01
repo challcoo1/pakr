@@ -89,7 +89,13 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userGear: entry.input.trim(),
-          requirement: requirement
+          requirement: requirement,
+          tripContext: trip ? {
+            name: trip.name,
+            region: trip.region,
+            duration: trip.duration,
+            conditions: trip.conditions
+          } : null
         }),
       });
       const data = await response.json();
