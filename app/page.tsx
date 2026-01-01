@@ -205,41 +205,6 @@ export default function Home() {
     }));
   };
 
-  // FIND button - search for gear recommendations
-  const handleFindGear = async (item: string, category?: string) => {
-    // Use the requirement item as the search query
-    setGearSearch(prev => ({
-      ...prev,
-      [item]: { isSearching: true, results: [], showResults: true }
-    }));
-
-    try {
-      const response = await fetch('/api/search-gear', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: item, // Search for the required item type
-          category: category
-        }),
-      });
-      const data = await response.json();
-
-      setGearSearch(prev => ({
-        ...prev,
-        [item]: {
-          isSearching: false,
-          results: data.results || [],
-          showResults: true
-        }
-      }));
-    } catch {
-      setGearSearch(prev => ({
-        ...prev,
-        [item]: { isSearching: false, results: [], showResults: false }
-      }));
-    }
-  };
-
   const getStatusIndicator = (status: string) => {
     switch (status) {
       case 'suitable': return { icon: '●', color: '#2C5530', label: 'Good' };
@@ -317,7 +282,6 @@ export default function Home() {
                   <th className="text-left">Required</th>
                   <th className="text-left">You Have</th>
                   <th className="text-center w-20">Status</th>
-                  <th className="text-right w-28">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -325,8 +289,6 @@ export default function Home() {
                   const entry = userGear[g.item] || { input: '', status: 'empty', reasons: [] };
                   const search = gearSearch[g.item] || { isSearching: false, results: [], showResults: false };
                   const status = getStatusIndicator(entry.status);
-                  const needsAction = entry.status === 'empty' || entry.status === 'unsuitable';
-                  const needsUpgrade = entry.status === 'marginal';
 
                   return (
                     <tr key={g.item} className={g.priority === 'critical' ? 'critical' : ''}>
@@ -379,24 +341,6 @@ export default function Home() {
                         <span style={{ color: status.color, fontSize: '1.25rem' }}>
                           {status.icon}
                         </span>
-                      </td>
-                      <td className="text-right">
-                        {needsAction && (
-                          <button
-                            className="btn-action"
-                            onClick={() => handleFindGear(g.item, g.category)}
-                          >
-                            FIND
-                          </button>
-                        )}
-                        {needsUpgrade && (
-                          <button
-                            className="btn-action btn-upgrade"
-                            onClick={() => handleFindGear(g.item, g.category)}
-                          >
-                            UPGRADE
-                          </button>
-                        )}
                       </td>
                     </tr>
                   );
