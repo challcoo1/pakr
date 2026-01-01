@@ -4,7 +4,7 @@ import { Suspense } from 'react';
 import { useState, useEffect, useRef, FormEvent } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { GearComparison, GearComparisonItem, GearRequirement } from '@/components/GearComparison';
-import { validateGearForRequirement, UserGear, formatValidationResult } from '@/lib/validate-gear';
+import { validateGearForRequirement, UserGear } from '@/lib/validate-gear';
 
 interface TripData {
   trip?: {
@@ -28,41 +28,6 @@ interface Message {
   tripData?: TripData;
 }
 
-// Mock user gear database (in real app, would come from DB)
-const mockUserGear: UserGear[] = [
-  {
-    name: 'Trango Tower GTX',
-    manufacturer: 'La Sportiva',
-    category: 'footwear/alpine_boots/4_season',
-    specs: {
-      temperature_rating_c: -20,
-      crampon_compatible: true,
-      gore_tex: true,
-      weight_g: 1980
-    }
-  },
-  {
-    name: 'X Ultra 4 GTX',
-    manufacturer: 'Salomon',
-    category: 'footwear/hiking_boots/mid',
-    specs: {
-      gore_tex: true,
-      crampon_compatible: false,
-      weight_g: 850
-    }
-  },
-  {
-    name: 'Alpha SV',
-    manufacturer: "Arc'teryx",
-    category: 'clothing/shells/hardshell',
-    specs: {
-      waterproof_rating_mm: 28000,
-      gore_tex: true,
-      weight_g: 490
-    }
-  }
-];
-
 function ChatContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -72,10 +37,27 @@ function ChatContent() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [currentTripData, setCurrentTripData] = useState<TripData | null>(null);
+  const [userGear, setUserGear] = useState<UserGear[]>([]);
   const [userGearMatches, setUserGearMatches] = useState<Map<string, UserGear>>(new Map());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const hasProcessedInitial = useRef(false);
+
+  // Fetch user's gear from database
+  useEffect(() => {
+    async function fetchUserGear() {
+      try {
+        const response = await fetch('/api/user-gear');
+        const data = await response.json();
+        if (data.gear) {
+          setUserGear(data.gear);
+        }
+      } catch (error) {
+        console.error('Failed to fetch user gear:', error);
+      }
+    }
+    fetchUserGear();
+  }, []);
 
   useEffect(() => {
     if (initialQuery && !hasProcessedInitial.current) {
@@ -152,7 +134,7 @@ function ChatContent() {
 
     for (const req of requirements) {
       // Find best matching gear from user's collection
-      const matchedGear = findBestMatch(req, mockUserGear);
+      const matchedGear = findBestMatch(req, userGear);
       if (matchedGear) {
         matches.set(req.item, matchedGear);
       }
