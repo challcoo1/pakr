@@ -3,132 +3,130 @@
 @tailwind utilities;
 
 :root {
-  --cream: #F5F0E1;
-  --paper: #EDE6D6;
+  --cream: #F5F1E8;
+  --charcoal: #2B2B2B;
   --burnt: #CC5500;
   --forest: #2C5530;
-  --ink: #1A1A18;
-  --ink-light: #5C5C52;
+  --muted: #6B6B6B;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
   background-color: var(--cream);
-  color: var(--ink);
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-/* Chat bubbles */
-.bubble-user {
-  background-color: var(--burnt);
-  color: white;
-  padding: 0.75rem 1rem;
-  border-radius: 1rem 1rem 0.25rem 1rem;
-  max-width: 80%;
-  margin-left: auto;
-}
-
-.bubble-system {
-  background-color: var(--forest);
-  color: var(--cream);
-  padding: 0.75rem 1rem;
-  border-radius: 1rem 1rem 1rem 0.25rem;
-  max-width: 85%;
-}
-
-.bubble-system pre {
-  font-family: inherit;
-  white-space: pre-wrap;
+  color: var(--charcoal);
   margin: 0;
+  padding: 0;
+  min-height: 100vh;
 }
 
-/* Gear list inside system bubble */
-.gear-list {
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid rgba(255,255,255,0.2);
-}
-
-.gear-item {
-  padding: 0.5rem 0;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-}
-
-.gear-item:last-child {
-  border-bottom: none;
-}
-
-.gear-name {
-  font-weight: 600;
-}
-
-.gear-spec {
-  opacity: 0.8;
-  font-size: 0.85em;
-}
-
-.tag-required {
-  display: inline-block;
-  background: rgba(255,255,255,0.2);
-  padding: 0.1rem 0.4rem;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-left: 0.5rem;
-}
-
-.tag-owned {
-  display: inline-block;
-  background: var(--burnt);
-  padding: 0.1rem 0.4rem;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-left: 0.5rem;
-}
-
-/* Input */
-.chat-input {
-  background: white;
-  border: 2px solid var(--ink);
-  padding: 0.75rem 1rem;
-  font-family: inherit;
-  font-size: 14px;
+/* Subtle paper texture */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.3;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.06'/%3E%3C/svg%3E");
+}
+
+/* Logo */
+.logo {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--charcoal);
+}
+
+/* Main input */
+.main-input {
+  width: 100%;
+  max-width: 600px;
+  padding: 1rem 1.25rem;
+  font-size: 1.125rem;
+  font-family: inherit;
+  background: transparent;
+  border: 2px solid var(--burnt);
+  border-radius: 8px;
+  color: var(--charcoal);
+  outline: none;
+  transition: box-shadow 0.2s;
+}
+
+.main-input:focus {
+  box-shadow: 0 0 0 3px rgba(204, 85, 0, 0.15);
+}
+
+.main-input::placeholder {
+  color: var(--muted);
+}
+
+/* Chat input (bottom) */
+.chat-input {
+  width: 100%;
+  padding: 1rem 1.25rem;
+  font-size: 1rem;
+  font-family: inherit;
+  background: white;
+  border: 2px solid var(--burnt);
+  border-radius: 8px;
+  color: var(--charcoal);
+  outline: none;
 }
 
 .chat-input:focus {
-  outline: none;
-  border-color: var(--burnt);
+  box-shadow: 0 0 0 3px rgba(204, 85, 0, 0.15);
 }
 
 .chat-input::placeholder {
-  color: var(--ink-light);
+  color: var(--muted);
 }
 
-/* Header */
-.header {
-  border-bottom: 2px solid var(--ink);
-  padding: 1rem 1.5rem;
-  font-weight: 700;
+/* Chat bubbles */
+.bubble {
+  max-width: 85%;
+  padding: 0.875rem 1.125rem;
+  border-radius: 1.25rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.bubble-user {
+  background-color: var(--burnt);
+  color: white;
+  border-bottom-right-radius: 0.25rem;
+  margin-left: auto;
+}
+
+.bubble-assistant {
+  background-color: var(--forest);
+  color: white;
+  border-bottom-left-radius: 0.25rem;
+}
+
+/* Prompt text */
+.prompt-text {
   font-size: 1rem;
-}
-
-/* Loading */
-.typing {
-  opacity: 0.7;
+  color: var(--muted);
+  margin-bottom: 1.5rem;
 }
 
 /* Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--paper);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--ink-light);
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
 }

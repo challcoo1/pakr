@@ -2,11 +2,17 @@
 
 import { Suspense } from 'react';
 import { useState, useEffect, useRef, FormEvent } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { ChatMessages, Message } from '@/components/ChatMessage';
+import { useSearchParams, useRouter } from 'next/navigation';
+
+interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+}
 
 function ChatContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const initialQuery = searchParams.get('q');
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -56,7 +62,6 @@ function ChatContent() {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: data.content,
-        gear: data.gear,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -67,7 +72,7 @@ function ChatContent() {
         {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: 'Error. Try again.',
+          content: 'Something went wrong. Try again.',
         },
       ]);
     } finally {
@@ -84,20 +89,33 @@ function ChatContent() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
-      <header className="header">
-        pakr
+      <header className="px-6 py-4">
+        <button onClick={() => router.push('/')} className="logo text-xl">
+          pakr
+        </button>
       </header>
 
       {/* Messages */}
-      <main className="flex-1 overflow-y-auto p-4">
-        <div className="max-w-2xl mx-auto">
-          <ChatMessages messages={messages} />
+      <main className="flex-1 overflow-y-auto px-6 pb-4">
+        <div className="max-w-2xl mx-auto space-y-4">
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div
+                className={`bubble ${
+                  message.role === 'user' ? 'bubble-user' : 'bubble-assistant'
+                }`}
+              >
+                {message.content}
+              </div>
+            </div>
+          ))}
 
           {isLoading && (
-            <div className="mb-4 flex justify-start">
-              <div className="bubble-system typing">
-                <pre>...</pre>
-              </div>
+            <div className="flex justify-start">
+              <div className="bubble bubble-assistant opacity-70">...</div>
             </div>
           )}
 
@@ -106,14 +124,14 @@ function ChatContent() {
       </main>
 
       {/* Input */}
-      <footer className="p-4 border-t-2" style={{ borderColor: 'var(--ink)' }}>
+      <footer className="px-6 py-4">
         <form onSubmit={handleSubmit} className="max-w-2xl mx-auto">
           <input
             ref={inputRef}
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="overland track tasmania..."
+            placeholder="Type a message..."
             className="chat-input"
             disabled={isLoading}
             autoFocus
@@ -126,7 +144,7 @@ function ChatContent() {
 
 export default function ChatPage() {
   return (
-    <Suspense fallback={<div className="p-4">loading...</div>}>
+    <Suspense fallback={<div className="min-h-screen" />}>
       <ChatContent />
     </Suspense>
   );
