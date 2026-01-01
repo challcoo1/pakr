@@ -7,40 +7,61 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-const VALIDATE_PROMPT = `You are an experienced outdoor guide validating gear choices.
+const VALIDATE_PROMPT = `You are an experienced outdoor guide with 20+ years of real-world experience.
 
-CRITICAL: Consider the ACTUAL trip context, not just category matching.
+Your job: Determine if the user's gear is ACTUALLY appropriate for THIS SPECIFIC trip.
 
-Examples of GOOD validation:
+DO NOT mechanically compare specs. THINK about whether this gear will work in practice.
 
-Trip: "Platypus Trail day hike" (easy, maintained trail, 4 hours)
+CONTEXT MATTERS:
+
+1. TRIP DIFFICULTY
+   - Maintained trail with signs → lightweight gear is fine
+   - Off-trail scrambling → need sturdier gear
+   - Technical alpine → specific safety gear required
+
+2. DURATION
+   - Day hike (4-8 hours) → minimal requirements
+   - Overnight → shelter, sleep system matter
+   - Multi-day → durability, capacity, comfort important
+
+3. CONDITIONS
+   - Mild weather → wide gear tolerance
+   - Rain likely → waterproofing important
+   - Extreme cold → specific ratings matter
+   - Remote/no bailout → reliability critical
+
+4. GEAR INTERACTIONS
+   - Has water filter → doesn't need to carry 3L, refill points work
+   - Ultralight tent → fine for fair weather, risky in storms
+   - Trail runners → great for maintained trails, risky on scree/snow
+
+EXAMPLES OF GOOD THINKING:
+
+Trip: "Platypus Trail day hike" (maintained trail, 4 hours, mild)
+Requirement: "2-3L water capacity"
+User has: "1L bottle + Sawyer filter"
+→ SUITABLE. With filter and water sources on trail, 1L is plenty. Can refill.
+
+Trip: "Overland Track" (6 days, mud, rain, remote)
 Requirement: "Hiking boots"
-User has: "Arc'teryx Norvan trail runners"
-→ SUITABLE - Trail runners are excellent for easy day hikes. Good grip, lightweight, appropriate for maintained trails.
+User has: "Altra Lone Peak trail runners"
+→ MARGINAL. Many people do Overland in trail runners, but boots give better ankle support in mud. Personal preference - experienced hikers often prefer runners.
 
-Trip: "Overland Track" (multi-day, muddy, variable weather)
-Requirement: "Hiking boots"
-User has: "Arc'teryx Norvan trail runners"
-→ MARGINAL - Trail runners work but boots provide better ankle support and waterproofing for 6 days of mud.
-
-Trip: "Matterhorn via Hörnli Ridge" (alpine climbing, glacier, technical)
+Trip: "Mt Blanc" (glacier, altitude, technical)
 Requirement: "Mountaineering boots"
-User has: "Arc'teryx Norvan trail runners"
-→ UNSUITABLE - Need crampon-compatible boots for glacier travel and mixed climbing.
+User has: "Salomon hiking boots"
+→ UNSUITABLE. Need crampon-compatible boots for glacier travel. Safety issue.
 
-VALIDATION RULES:
-1. Easy day hikes: Trail runners, approach shoes, light hikers are ALL suitable
-2. Multi-day treks: Consider ankle support, waterproofing, durability
-3. Technical terrain: Specific gear requirements matter (crampon compatibility, etc.)
-4. Be practical, not pedantic - real hikers often use lighter gear than "required"
-
+YOUR RESPONSE:
 Return ONLY valid JSON:
 {
   "status": "suitable" | "marginal" | "unsuitable",
-  "reasons": ["reason1"]
+  "reason": "One clear sentence explaining your thinking"
 }
 
-Keep reasons SHORT (1 sentence max).`;
+Be practical. Real hikers often use lighter gear than guidebooks suggest.
+Only mark "unsuitable" if there's a genuine safety concern or the gear simply won't work.`;
 
 export async function POST(request: Request) {
   try {
@@ -50,23 +71,32 @@ export async function POST(request: Request) {
       return NextResponse.json({ status: 'empty', reasons: [] });
     }
 
-    // Build context string
-    let contextStr = '';
+    // Build comprehensive context
+    const contextParts: string[] = [];
+
     if (tripContext) {
-      contextStr = `Trip: "${tripContext.name}" (${tripContext.region}, ${tripContext.duration})`;
+      contextParts.push(`TRIP: ${tripContext.name}`);
+      if (tripContext.region) contextParts.push(`Location: ${tripContext.region}`);
+      if (tripContext.duration) contextParts.push(`Duration: ${tripContext.duration}`);
       if (tripContext.conditions?.length) {
-        contextStr += `\nConditions: ${tripContext.conditions.join(', ')}`;
+        contextParts.push(`Conditions: ${tripContext.conditions.join(', ')}`);
       }
     }
+
+    const prompt = `${contextParts.join('\n')}
+
+REQUIREMENT: ${requirement.item}
+Specs suggested: ${requirement.specs || 'not specified'}
+
+USER HAS: "${userGear}"
+
+Is this gear appropriate for this specific trip? Think holistically.`;
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
         { role: 'system', content: VALIDATE_PROMPT },
-        {
-          role: 'user',
-          content: `${contextStr}\n\nRequirement: ${requirement.item}\nSpecs: ${requirement.specs}\n\nUser has: "${userGear}"`
-        }
+        { role: 'user', content: prompt }
       ],
       temperature: 0.3,
       max_tokens: 200,
@@ -80,9 +110,13 @@ export async function POST(request: Request) {
     }
 
     const data = JSON.parse(jsonMatch[0]);
+
+    // Handle both "reason" (singular) and "reasons" (array)
+    const reasons = data.reasons || (data.reason ? [data.reason] : []);
+
     return NextResponse.json({
       status: data.status || 'empty',
-      reasons: data.reasons || []
+      reasons
     });
 
   } catch (error) {
