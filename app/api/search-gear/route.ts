@@ -27,31 +27,60 @@ export async function POST(request: Request) {
 
     const searchTerm = query.trim().toLowerCase();
 
-    // Step 1: Search database first
-    const dbResults = await sql`
-      SELECT id, name, manufacturer, category, specs
-      FROM gear_catalog
-      WHERE
-        LOWER(name) LIKE ${'%' + searchTerm + '%'}
-        OR LOWER(manufacturer) LIKE ${'%' + searchTerm + '%'}
-      LIMIT 20
-    `;
+    // Search DB and online in parallel
+    const [dbResults, onlineResults] = await Promise.all([
+      searchDatabase(searchTerm),
+      searchOnline(query.trim(), category)
+    ]);
 
-    // Format DB results
-    const dbGear = dbResults.map((row: any) => ({
-      id: row.id,
-      name: row.name,
-      brand: row.manufacturer,
-      specs: formatSpecs(row.specs),
-      source: 'database'
+    // Build seen set from DB names for deduplication
+    const dbNames = new Set(dbResults.map((g: any) => g.name.toLowerCase()));
+
+    // Mark online results that are new (not in DB)
+    const onlineWithNew = onlineResults.map((g: any) => ({
+      ...g,
+      isNew: !dbNames.has(g.name.toLowerCase())
     }));
 
-    // Step 2: Always search online to get current products
-    const prompt = category
-      ? `Category: "${category}"\nQuery: "${query.trim()}"\n\nFind current products available for purchase.`
-      : `Query: "${query.trim()}"\n\nFind current products available for purchase.`;
+    // Filter to only truly new online results
+    const newOnline = onlineWithNew.filter((g: any) => g.isNew);
 
-    // Use OpenAI with web search enabled
+    // Combine: DB first, then new online results
+    const results = [...dbResults, ...newOnline];
+
+    return NextResponse.json({ results });
+
+  } catch (error) {
+    console.error('Search error:', error);
+    return NextResponse.json({ results: [], error: String(error) });
+  }
+}
+
+async function searchDatabase(searchTerm: string) {
+  const dbResults = await sql`
+    SELECT id, name, manufacturer, category, specs
+    FROM gear_catalog
+    WHERE
+      LOWER(name) LIKE ${'%' + searchTerm + '%'}
+      OR LOWER(manufacturer) LIKE ${'%' + searchTerm + '%'}
+    LIMIT 20
+  `;
+
+  return dbResults.map((row: any) => ({
+    id: row.id,
+    name: row.name,
+    brand: row.manufacturer,
+    specs: formatSpecs(row.specs),
+    source: 'database'
+  }));
+}
+
+async function searchOnline(query: string, category?: string) {
+  try {
+    const prompt = category
+      ? `Category: "${category}"\nQuery: "${query}"\n\nFind current products available for purchase.`
+      : `Query: "${query}"\n\nFind current products available for purchase.`;
+
     const response = await openai.responses.create({
       model: 'gpt-4o',
       tools: [{ type: 'web_search' }],
@@ -61,8 +90,6 @@ export async function POST(request: Request) {
       ],
     });
 
-    let onlineGear: any[] = [];
-
     // Extract text from response
     const textOutput = response.output.find((o: any) => o.type === 'message');
     if (textOutput?.content) {
@@ -71,24 +98,17 @@ export async function POST(request: Request) {
 
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
-        onlineGear = parsed.map((item: any) => ({
+        return parsed.map((item: any) => ({
           ...item,
           source: 'online'
         }));
       }
     }
 
-    // Combine results - DB first, then online (deduplicated)
-    const seenNames = new Set(dbGear.map((g: any) => g.name.toLowerCase()));
-    const uniqueOnline = onlineGear.filter((g: any) => !seenNames.has(g.name.toLowerCase()));
-
-    const results = [...dbGear, ...uniqueOnline];
-
-    return NextResponse.json({ results });
-
+    return [];
   } catch (error) {
-    console.error('Search error:', error);
-    return NextResponse.json({ results: [], error: String(error) });
+    console.error('Online search error:', error);
+    return [];
   }
 }
 

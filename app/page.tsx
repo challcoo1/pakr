@@ -44,6 +44,7 @@ interface ProductMatch {
   brand: string;
   specs: string;
   source?: 'database' | 'online';
+  isNew?: boolean;
 }
 
 interface GearSearchState {
@@ -646,7 +647,12 @@ export default function Home() {
                                   onClick={() => handleSelectProduct(g.item, product)}
                                   className="w-full text-left p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
                                 >
-                                  <div className="font-medium text-sm">{product.name}</div>
+                                  <div className="font-medium text-sm flex items-center gap-2">
+                                    {product.name}
+                                    {product.isNew && (
+                                      <span className="text-xs bg-burnt text-white px-1.5 py-0.5 rounded">NEW</span>
+                                    )}
+                                  </div>
                                   <div className="text-xs text-muted">{product.specs}</div>
                                 </button>
                               ))
