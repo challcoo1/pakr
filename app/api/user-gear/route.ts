@@ -1,12 +1,18 @@
 // app/api/user-gear/route.ts
 
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
 import { sql } from '@/lib/db';
+
+// Dynamic import auth to avoid module init issues
+async function getAuth() {
+  const { auth } = await import('@/lib/auth');
+  return auth;
+}
 
 // GET - fetch user's gear portfolio
 export async function GET() {
   try {
+    const auth = await getAuth();
     const session = await auth();
     if (!session?.user?.email) {
       return NextResponse.json({ gear: [] });
@@ -58,6 +64,7 @@ export async function GET() {
 // POST - add gear to user's portfolio
 export async function POST(request: Request) {
   try {
+    const auth = await getAuth();
     const session = await auth();
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
@@ -113,6 +120,7 @@ export async function POST(request: Request) {
 // DELETE - remove gear from portfolio
 export async function DELETE(request: Request) {
   try {
+    const auth = await getAuth();
     const session = await auth();
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
