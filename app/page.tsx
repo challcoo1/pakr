@@ -9,7 +9,6 @@ interface GearRequirement {
   priority: 'critical' | 'recommended' | 'optional';
 }
 
-// Deep trip context from search
 interface TripMatch {
   name: string;
   location: string;
@@ -51,6 +50,13 @@ interface GearSearchState {
   showResults: boolean;
 }
 
+// Confirmation step fields
+interface TripConfirm {
+  place: string;
+  timeOfYear: string;
+  duration: string;
+}
+
 export default function Home() {
   const [objective, setObjective] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -62,8 +68,28 @@ export default function Home() {
   const [exactSpecs, setExactSpecs] = useState(false);
   const [gearSearch, setGearSearch] = useState<Record<string, GearSearchState>>({});
 
-  // Analyze trip - search first, then get gear requirements
-  const handleAnalyze = async (e: FormEvent) => {
+  // Confirmation step
+  const [tripConfirm, setTripConfirm] = useState<TripConfirm | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  // Extract time of year from query string
+  const extractTimeOfYear = (query: string): string => {
+    const months = ['january', 'february', 'march', 'april', 'may', 'june',
+                    'july', 'august', 'september', 'october', 'november', 'december'];
+    const seasons = ['spring', 'summer', 'autumn', 'fall', 'winter'];
+    const lower = query.toLowerCase();
+
+    for (const month of months) {
+      if (lower.includes(month)) return month.charAt(0).toUpperCase() + month.slice(1);
+    }
+    for (const season of seasons) {
+      if (lower.includes(season)) return season.charAt(0).toUpperCase() + season.slice(1);
+    }
+    return '';
+  };
+
+  // Initial search - shows confirmation step
+  const handleSearch = async (e: FormEvent) => {
     e.preventDefault();
     if (!objective.trim() || isLoading) return;
 
@@ -72,10 +98,11 @@ export default function Home() {
     setSelectedTrip(null);
     setTripResults([]);
     setShowTripResults(false);
+    setShowConfirm(false);
+    setTripConfirm(null);
     setUserGear({});
 
     try {
-      // Step 1: Search for trip to get deep context
       const searchResponse = await fetch('/api/search-trip', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -83,7 +110,7 @@ export default function Home() {
       });
       const searchData = await searchResponse.json();
 
-      // If multiple matches, let user choose
+      // If multiple matches, let user choose first
       if (searchData.results && searchData.results.length > 1) {
         setTripResults(searchData.results);
         setShowTripResults(true);
@@ -91,64 +118,104 @@ export default function Home() {
         return;
       }
 
-      // Get deep context if we have a match
-      const tripContext = searchData.results?.[0] || null;
+      // Single match or no match - show confirmation
+      const match = searchData.results?.[0];
+      const timeOfYear = extractTimeOfYear(objective);
 
-      // Step 2: Analyze trip for gear requirements
-      const analyzeResponse = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ objective: objective.trim() }),
+      setTripConfirm({
+        place: match?.name || objective.trim(),
+        timeOfYear: timeOfYear,
+        duration: match?.duration || '',
       });
-      const analyzeData = await analyzeResponse.json();
-
-      if (analyzeData.trip) {
-        // Merge deep context if we have it
-        setTrip({
-          ...analyzeData.trip,
-          difficulty: tripContext?.difficulty || '',
-          terrain: tripContext?.terrain || '',
-          hazards: tripContext?.hazards || '',
-        });
-        setSelectedTrip(tripContext);
-
-        const initial: Record<string, UserGearEntry> = {};
-        analyzeData.trip.gear.forEach((g: GearRequirement) => {
-          initial[g.item] = { input: '', status: 'empty', reasons: [] };
-        });
-        setUserGear(initial);
-      }
+      setSelectedTrip(match || null);
+      setShowConfirm(true);
     } catch (error) {
-      console.error('Analysis failed:', error);
+      console.error('Search failed:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // User selects from multiple trip options
-  const handleSelectTrip = async (tripMatch: TripMatch) => {
+  // User selects from multiple trip options - goes to confirmation
+  const handleSelectTrip = (tripMatch: TripMatch) => {
     setShowTripResults(false);
+    const timeOfYear = extractTimeOfYear(objective);
+
+    setTripConfirm({
+      place: tripMatch.name,
+      timeOfYear: timeOfYear,
+      duration: tripMatch.duration,
+    });
+    setSelectedTrip(tripMatch);
+    setShowConfirm(true);
+  };
+
+  // Re-search with updated confirmation fields
+  const handleResearch = async () => {
+    if (!tripConfirm?.place.trim()) return;
+
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/analyze', {
+      // Build query from fields
+      let query = tripConfirm.place;
+      if (tripConfirm.timeOfYear) query += ` in ${tripConfirm.timeOfYear}`;
+
+      const searchResponse = await fetch('/api/search-trip', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ objective: tripMatch.name }),
+        body: JSON.stringify({ query }),
       });
+      const searchData = await searchResponse.json();
 
-      const data = await response.json();
-      if (data.trip) {
+      const match = searchData.results?.[0];
+      if (match) {
+        setTripConfirm(prev => ({
+          ...prev!,
+          place: match.name,
+          duration: prev?.duration || match.duration,
+        }));
+        setSelectedTrip(match);
+      }
+    } catch (error) {
+      console.error('Research failed:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Confirm and analyze
+  const handleConfirmAnalyze = async () => {
+    if (!tripConfirm) return;
+
+    setIsLoading(true);
+    setShowConfirm(false);
+
+    try {
+      // Build full objective from confirmed fields
+      let fullObjective = tripConfirm.place;
+      if (tripConfirm.timeOfYear) fullObjective += ` in ${tripConfirm.timeOfYear}`;
+      if (tripConfirm.duration && !tripConfirm.duration.includes('missing')) {
+        fullObjective += `, ${tripConfirm.duration}`;
+      }
+
+      const analyzeResponse = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ objective: fullObjective }),
+      });
+      const analyzeData = await analyzeResponse.json();
+
+      if (analyzeData.trip) {
         setTrip({
-          ...data.trip,
-          difficulty: tripMatch.difficulty,
-          terrain: tripMatch.terrain,
-          hazards: tripMatch.hazards,
+          ...analyzeData.trip,
+          difficulty: selectedTrip?.difficulty || '',
+          terrain: selectedTrip?.terrain || '',
+          hazards: selectedTrip?.hazards || '',
         });
-        setSelectedTrip(tripMatch);
 
         const initial: Record<string, UserGearEntry> = {};
-        data.trip.gear.forEach((g: GearRequirement) => {
+        analyzeData.trip.gear.forEach((g: GearRequirement) => {
           initial[g.item] = { input: '', status: 'empty', reasons: [] };
         });
         setUserGear(initial);
@@ -166,7 +233,6 @@ export default function Home() {
       ...prev,
       [item]: { ...prev[item], input: value }
     }));
-    // Clear any previous search results when typing
     setGearSearch(prev => ({
       ...prev,
       [item]: { isSearching: false, results: [], showResults: false }
@@ -180,8 +246,6 @@ export default function Home() {
       return;
     }
 
-    const requirement = trip?.gear.find(g => g.item === item);
-
     setGearSearch(prev => ({
       ...prev,
       [item]: { isSearching: true, results: [], showResults: true }
@@ -193,7 +257,7 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           query: entry.input.trim(),
-          category: item  // Use the requirement item name as the category filter
+          category: item
         }),
       });
       const data = await response.json();
@@ -216,21 +280,18 @@ export default function Home() {
 
   // Select a product from search results
   const handleSelectProduct = async (item: string, product: ProductMatch) => {
-    // Set the input to the selected product name
     setUserGear(prev => ({
       ...prev,
       [item]: { ...prev[item], input: product.name }
     }));
-    // Hide search results
     setGearSearch(prev => ({
       ...prev,
       [item]: { ...prev[item], showResults: false }
     }));
-    // Now validate
     await validateGear(item, product.name);
   };
 
-  // Core validation function - pass deep trip context
+  // Core validation function
   const validateGear = async (item: string, gearText: string) => {
     const requirement = trip?.gear.find(g => g.item === item);
     if (!requirement) return;
@@ -267,7 +328,7 @@ export default function Home() {
     }
   };
 
-  // Handle blur/Enter - search if exact specs, validate if general
+  // Handle blur/Enter
   const handleGearSubmit = async (item: string) => {
     const entry = userGear[item];
     if (!entry?.input.trim()) {
@@ -285,7 +346,6 @@ export default function Home() {
     }
   };
 
-  // Close search dropdown
   const handleCloseSearch = (item: string) => {
     setGearSearch(prev => ({
       ...prev,
@@ -293,7 +353,6 @@ export default function Home() {
     }));
   };
 
-  // Recommend gear for a requirement
   const handleRecommend = async (item: string) => {
     setGearSearch(prev => ({
       ...prev,
@@ -305,7 +364,7 @@ export default function Home() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: item,  // Search for the requirement type itself
+          query: item,
           category: item
         }),
       });
@@ -339,7 +398,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
-      {/* Header with input - always visible */}
+      {/* Header */}
       <header className="sticky top-0 bg-cream border-b-2 border-charcoal p-4 z-10">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-4">
@@ -357,12 +416,12 @@ export default function Home() {
               </button>
             </label>
           </div>
-          <form onSubmit={handleAnalyze} className="relative">
+          <form onSubmit={handleSearch} className="relative">
             <input
               type="text"
               value={objective}
               onChange={(e) => setObjective(e.target.value)}
-              placeholder="Where are you going? e.g. Overland Track in October"
+              placeholder="Where are you going? e.g. Routeburn Track in October"
               className="input-field w-full pr-10"
               autoFocus
             />
@@ -388,9 +447,9 @@ export default function Home() {
 
       {/* Results */}
       <main className="max-w-4xl mx-auto p-4">
-        {isLoading && (
+        {isLoading && !showConfirm && (
           <div className="text-center py-12 text-muted">
-            {showTripResults ? 'Searching trips...' : 'Analyzing trip requirements...'}
+            Searching...
           </div>
         )}
 
@@ -413,7 +472,92 @@ export default function Home() {
           </div>
         )}
 
-        {trip && !isLoading && !showTripResults && (
+        {/* Confirmation Step */}
+        {showConfirm && tripConfirm && !isLoading && (
+          <div className="trip-summary">
+            <h2 className="text-lg font-bold mb-4">Confirm your trip</h2>
+
+            <div className="space-y-4">
+              {/* Place */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Place</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={tripConfirm.place}
+                    onChange={(e) => setTripConfirm({ ...tripConfirm, place: e.target.value })}
+                    className="input-small flex-1"
+                    placeholder="Trail or destination name"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleResearch}
+                    disabled={isLoading}
+                    className="px-3 py-1 text-sm border border-charcoal rounded hover:bg-gray-100"
+                  >
+                    Search
+                  </button>
+                </div>
+                {selectedTrip && (
+                  <div className="text-xs text-muted mt-1">{selectedTrip.location}</div>
+                )}
+              </div>
+
+              {/* Time of Year */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Time of Year</label>
+                <input
+                  type="text"
+                  value={tripConfirm.timeOfYear}
+                  onChange={(e) => setTripConfirm({ ...tripConfirm, timeOfYear: e.target.value })}
+                  className={`input-small w-full ${!tripConfirm.timeOfYear ? 'border-burnt' : ''}`}
+                  placeholder={tripConfirm.timeOfYear || 'Missing - enter month or season'}
+                />
+                {!tripConfirm.timeOfYear && (
+                  <div className="text-xs text-burnt mt-1">Missing</div>
+                )}
+              </div>
+
+              {/* Duration */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Duration</label>
+                <input
+                  type="text"
+                  value={tripConfirm.duration}
+                  onChange={(e) => setTripConfirm({ ...tripConfirm, duration: e.target.value })}
+                  className={`input-small w-full ${!tripConfirm.duration ? 'border-burnt' : ''}`}
+                  placeholder={tripConfirm.duration || 'Missing - e.g. 3 days, 4 hours'}
+                />
+                {!tripConfirm.duration && (
+                  <div className="text-xs text-burnt mt-1">Missing</div>
+                )}
+              </div>
+
+              {/* Selected trip details */}
+              {selectedTrip && (
+                <div className="mt-4 p-3 bg-gray-50 rounded text-sm">
+                  <div className="font-medium">{selectedTrip.name}</div>
+                  <div className="text-muted">{selectedTrip.summary}</div>
+                  <div className="text-xs text-muted mt-1">
+                    {selectedTrip.difficulty} · {selectedTrip.distance} · {selectedTrip.terrain}
+                  </div>
+                </div>
+              )}
+
+              {/* Confirm button */}
+              <button
+                onClick={handleConfirmAnalyze}
+                disabled={!tripConfirm.place || isLoading}
+                className="btn-primary w-full mt-4"
+              >
+                {isLoading ? 'Analyzing...' : 'Analyze Gear Requirements'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Trip Analysis Results */}
+        {trip && !isLoading && !showTripResults && !showConfirm && (
           <>
             {/* Trip Summary */}
             <div className="trip-summary mb-6">
@@ -465,14 +609,12 @@ export default function Home() {
                           value={entry.input}
                           onChange={(e) => handleGearChange(g.item, e.target.value)}
                           onBlur={() => {
-                            // Delay to allow click on results
                             setTimeout(() => handleCloseSearch(g.item), 200);
                           }}
                           onKeyDown={(e) => e.key === 'Enter' && handleGearSubmit(g.item)}
                           placeholder={exactSpecs ? "Search your gear..." : "What do you have?"}
                           className="input-small"
                         />
-                        {/* Search results dropdown */}
                         {search.showResults && (
                           <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-y-auto">
                             {search.isSearching ? (
@@ -523,9 +665,9 @@ export default function Home() {
           </>
         )}
 
-        {!trip && !isLoading && (
+        {!trip && !isLoading && !showTripResults && !showConfirm && (
           <div className="text-center py-12 text-muted">
-            Enter your objective above to see gear requirements
+            Enter your destination above to get started
           </div>
         )}
       </main>
