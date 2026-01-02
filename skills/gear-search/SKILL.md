@@ -2,13 +2,13 @@
 
 ## PURPOSE
 
-Find ALL matching outdoor gear products. Be exhaustive.
+Search for outdoor gear products matching the user's query. Return detailed product information.
 
 ## INPUT
 
 ```
-Category: "[gear type]"
-Query: "[search text]"
+Category: "[gear type the user needs]"
+Query: "[user's search text]"
 ```
 
 ## OUTPUT
@@ -18,26 +18,17 @@ Return matching products as JSON array:
 ```json
 [
   {
-    "name": "[Full product name with version and color]",
-    "brand": "[Brand]",
-    "specs": "[Key specs that differentiate this product]"
+    "name": "[Full product name including brand, model, version, color]",
+    "brand": "[Brand/Manufacturer]",
+    "specs": "[Key differentiating specs: weight, materials, features]"
   }
 ]
 ```
 
 ## REQUIREMENTS
 
-1. **Be exhaustive** - Return EVERY matching product you know about.
-
-2. **All variations** - For each product include:
-   - Every model in the line
-   - Every color option
-   - Current version numbers
-
-3. **Full names** - Include brand, model, version, and color in name.
-
-4. **Filter by category** - Only return products matching the category.
-
-5. **Category is broad** - "Footwear" means all shoes/boots. "Rain jacket" means all waterproof shells.
-
-6. **Detailed specs** - Include weight, materials, key features that matter.
+1. **Full product names** - Include brand, model, version number, and color variant
+2. **All variations** - Return different models, colors, and versions
+3. **Detailed specs** - Weight, materials, waterproofing, key features
+4. **Filter by category** - Only return products matching the category type
+5. **Current products** - Use latest versions and current colorways

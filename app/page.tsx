@@ -39,9 +39,11 @@ interface UserGearEntry {
 }
 
 interface ProductMatch {
+  id?: string;
   name: string;
   brand: string;
   specs: string;
+  source?: 'database' | 'online';
 }
 
 interface GearSearchState {
@@ -288,6 +290,21 @@ export default function Home() {
       ...prev,
       [item]: { ...prev[item], showResults: false }
     }));
+
+    // If gear is from online search, add to database (self-building)
+    if (product.source === 'online') {
+      fetch('/api/add-gear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: product.name,
+          brand: product.brand,
+          specs: product.specs,
+          category: item
+        }),
+      }).catch(console.error);
+    }
+
     await validateGear(item, product.name);
   };
 
