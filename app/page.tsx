@@ -140,6 +140,29 @@ export default function Home() {
   const [userCountry, setUserCountry] = useState<{ code: string; name: string; flag: string } | null>(null);
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
 
+  // Settings
+  const [showSettings, setShowSettings] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  // Load settings from localStorage on mount
+  useEffect(() => {
+    const savedSpecs = localStorage.getItem('pakr-specs-mode');
+    const savedTheme = localStorage.getItem('pakr-theme');
+    if (savedSpecs === 'detailed') setExactSpecs(true);
+    if (savedTheme === 'dark') setTheme('dark');
+  }, []);
+
+  // Apply theme class to document
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+  }, [theme]);
+
+  const saveSettings = () => {
+    localStorage.setItem('pakr-specs-mode', exactSpecs ? 'detailed' : 'general');
+    localStorage.setItem('pakr-theme', theme);
+    setShowSettings(false);
+  };
+
   // Auto-detect location on mount
   useEffect(() => {
     const detectLocation = async () => {
@@ -568,18 +591,6 @@ export default function Home() {
         <div className="red-band-container">
           <span className="logo-light">pakr</span>
           <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <span className="toggle-light">{exactSpecs ? 'Exact specs' : 'General'}</span>
-              <button
-                type="button"
-                onClick={() => setExactSpecs(!exactSpecs)}
-                className={`relative w-10 h-5 rounded-full transition-colors ${exactSpecs ? 'bg-white/30' : 'bg-white/20'}`}
-              >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform shadow ${exactSpecs ? 'translate-x-5' : ''}`}
-                />
-              </button>
-            </label>
             {/* Country selector */}
             <div className="relative">
               <button
@@ -656,6 +667,19 @@ export default function Home() {
                 </button>
               )}
             </div>
+
+            {/* Settings gear icon */}
+            <button
+              type="button"
+              onClick={() => setShowSettings(true)}
+              className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 transition-colors flex items-center justify-center"
+              title="Settings"
+            >
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
           </div>
         </div>
       </div>
@@ -1028,6 +1052,86 @@ export default function Home() {
         )}
         </main>
       </div>
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowSettings(false)}>
+          <div className="settings-modal" onClick={e => e.stopPropagation()}>
+            <div className="settings-header">
+              <span className="settings-title">SETTINGS</span>
+              <button
+                type="button"
+                onClick={() => setShowSettings(false)}
+                className="settings-close"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="settings-content">
+              {/* Display Mode */}
+              <div className="settings-section">
+                <div className="settings-label">Display</div>
+                <label className="settings-option">
+                  <input
+                    type="radio"
+                    name="specsMode"
+                    checked={!exactSpecs}
+                    onChange={() => setExactSpecs(false)}
+                    className="settings-radio"
+                  />
+                  <span>General specs (default)</span>
+                </label>
+                <label className="settings-option">
+                  <input
+                    type="radio"
+                    name="specsMode"
+                    checked={exactSpecs}
+                    onChange={() => setExactSpecs(true)}
+                    className="settings-radio"
+                  />
+                  <span>Detailed specs</span>
+                </label>
+              </div>
+
+              {/* Theme */}
+              <div className="settings-section">
+                <div className="settings-label">Theme</div>
+                <label className="settings-option">
+                  <input
+                    type="radio"
+                    name="theme"
+                    checked={theme === 'light'}
+                    onChange={() => setTheme('light')}
+                    className="settings-radio"
+                  />
+                  <span>Light mode (default)</span>
+                </label>
+                <label className="settings-option">
+                  <input
+                    type="radio"
+                    name="theme"
+                    checked={theme === 'dark'}
+                    onChange={() => setTheme('dark')}
+                    className="settings-radio"
+                  />
+                  <span>Dark mode</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="settings-footer">
+              <button
+                type="button"
+                onClick={saveSettings}
+                className="settings-save"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
