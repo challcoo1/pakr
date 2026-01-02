@@ -24,8 +24,15 @@ interface TripMatch {
 interface TripAnalysis {
   name: string;
   region: string;
+  timeOfYear: string;
   duration: string;
-  difficulty: string;
+  distance: string;
+  elevation: string;
+  grading: {
+    local: string;
+    international: string;
+    description: string;
+  };
   terrain: string;
   hazards: string;
   conditions: string[];
@@ -211,12 +218,7 @@ export default function Home() {
       const analyzeData = await analyzeResponse.json();
 
       if (analyzeData.trip) {
-        setTrip({
-          ...analyzeData.trip,
-          difficulty: selectedTrip?.difficulty || '',
-          terrain: selectedTrip?.terrain || '',
-          hazards: selectedTrip?.hazards || '',
-        });
+        setTrip(analyzeData.trip);
 
         const initial: Record<string, UserGearEntry> = {};
         analyzeData.trip.gear.forEach((g: GearRequirement) => {
@@ -366,7 +368,7 @@ export default function Home() {
             name: trip.name,
             region: trip.region,
             duration: trip.duration,
-            difficulty: trip.difficulty,
+            grading: trip.grading,
             terrain: trip.terrain,
             hazards: trip.hazards,
             conditions: trip.conditions
@@ -635,137 +637,181 @@ export default function Home() {
         {/* Trip Analysis Results */}
         {trip && !isLoading && !showTripResults && !showConfirm && (
           <>
-            {/* Trip Summary */}
-            <div className="trip-summary mb-6">
-              <h2 className="text-xl font-bold mb-2">{trip.name}</h2>
-              <p className="text-muted">{trip.region} · {trip.duration}</p>
-              {trip.difficulty && (
-                <p className="text-sm mt-1">
-                  <span className="font-medium">Difficulty:</span> {trip.difficulty} ·
-                  <span className="font-medium ml-2">Terrain:</span> {trip.terrain}
+            {/* Trip Summary Box */}
+            <div className="trip-box mb-6">
+              <h2 className="trip-box-name">{trip.name.toUpperCase()}</h2>
+              <p className="trip-box-line">
+                {trip.region}{trip.timeOfYear && ` | ${trip.timeOfYear}`}{trip.duration && ` | ${trip.duration}`}
+              </p>
+              {trip.grading?.local && (
+                <p className="trip-box-line">
+                  {trip.grading.local}{trip.grading.international && ` | International: ${trip.grading.international}`}
                 </p>
               )}
-              {trip.hazards && (
-                <p className="text-sm text-muted mt-1">
-                  <span className="font-medium">Hazards:</span> {trip.hazards}
+              {trip.grading?.description && (
+                <p className="trip-box-line text-muted">{trip.grading.description}</p>
+              )}
+              {(trip.elevation || trip.distance) && (
+                <p className="trip-box-line">
+                  {trip.elevation && `Elevation: ${trip.elevation}`}
+                  {trip.elevation && trip.distance && ' | '}
+                  {trip.distance && `Distance: ${trip.distance}`}
                 </p>
               )}
-              <div className="flex flex-wrap gap-2 mt-2">
-                {trip.conditions.map((c, i) => (
-                  <span key={i} className="condition-tag">{c}</span>
-                ))}
-              </div>
             </div>
 
-            {/* Gear Table */}
-            <table className="gear-table">
-              <thead>
-                <tr>
-                  <th className="text-left">Required</th>
-                  <th className="text-left">You Have</th>
-                  <th className="text-center w-20">Status</th>
-                  <th className="w-24"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {trip.gear.map((g) => {
-                  const entry = userGear[g.item] || { input: '', status: 'empty', reasons: [] };
-                  const search = gearSearch[g.item] || { isSearching: false, results: [], showResults: false };
-                  const status = getStatusIndicator(entry.status);
+            {/* Gear Requirements */}
+            <div className="gear-boxes">
+              {trip.gear.map((g) => {
+                const entry = userGear[g.item] || { input: '', status: 'empty', reasons: [] };
+                const search = gearSearch[g.item] || { isSearching: false, isSearchingOnline: false, results: [], showResults: false };
+                const status = getStatusIndicator(entry.status);
 
-                  return (
-                    <tr key={g.item} className={g.priority === 'critical' ? 'critical' : ''}>
-                      <td>
-                        <div className="font-medium">{g.item}</div>
-                        <div className="text-sm text-muted">{g.specs}</div>
-                      </td>
-                      <td className="relative">
+                return (
+                  <div key={g.item} className="gear-box">
+                    {/* Header */}
+                    <div className="gear-box-header">
+                      <span className="gear-box-bullet">●</span>
+                      <span className="gear-box-title">{g.item.toUpperCase()}</span>
+                    </div>
+                    <div className="gear-box-specs">{g.specs}</div>
+
+                    <div className="gear-box-divider" />
+
+                    {/* Empty state - show search */}
+                    {entry.status === 'empty' && !entry.input && (
+                      <div className="gear-box-input-row">
                         <input
                           type="text"
                           value={entry.input}
                           onChange={(e) => handleGearChange(g.item, e.target.value)}
-                          onBlur={() => {
-                            setTimeout(() => handleCloseSearch(g.item), 200);
-                          }}
                           onKeyDown={(e) => e.key === 'Enter' && handleGearSubmit(g.item)}
-                          placeholder={exactSpecs ? "Search your gear..." : "What do you have?"}
-                          className="input-small"
+                          placeholder="Search your gear..."
+                          className="gear-box-input"
                         />
-                        {search.showResults && (
-                          <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-72 overflow-y-auto">
-                            {search.isSearching ? (
-                              <div className="p-3 text-sm text-muted">Searching...</div>
-                            ) : (
-                              <>
-                                {search.results.length === 0 ? (
-                                  <div className="p-3 text-sm text-muted">No matches in database</div>
-                                ) : (
-                                  search.results.map((product, idx) => (
-                                    <button
-                                      key={idx}
-                                      type="button"
-                                      onClick={() => handleSelectProduct(g.item, product)}
-                                      className="w-full text-left p-3 hover:bg-gray-50 border-b border-gray-100"
-                                    >
-                                      <div className="font-medium text-sm flex items-center gap-2">
-                                        {product.name}
-                                        {product.isNew && (
-                                          <span className="text-xs bg-burnt text-white px-1.5 py-0.5 rounded">NEW</span>
-                                        )}
-                                      </div>
-                                      <div className="text-xs text-muted">{product.specs}</div>
-                                    </button>
-                                  ))
-                                )}
-                                {/* Search online button */}
-                                <button
-                                  type="button"
-                                  onClick={() => handleOnlineSearch(g.item)}
-                                  disabled={search.isSearchingOnline}
-                                  className="w-full text-left p-3 bg-gray-50 hover:bg-gray-100 border-t border-gray-200 text-sm text-burnt font-medium"
-                                >
-                                  {search.isSearchingOnline ? (
-                                    <span className="flex items-center gap-2">
-                                      <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                                      </svg>
-                                      Searching online...
-                                    </span>
-                                  ) : (
-                                    'Search online for latest →'
-                                  )}
-                                </button>
-                              </>
-                            )}
+                        <button
+                          onClick={() => handleRecommend(g.item)}
+                          disabled={search.isSearching || search.isSearchingOnline}
+                          className="gear-box-recommend"
+                        >
+                          {search.isSearching || search.isSearchingOnline ? 'Loading...' : 'Get recommendations →'}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Has input but not validated yet */}
+                    {entry.input && entry.status === 'empty' && (
+                      <div className="gear-box-input-row">
+                        <input
+                          type="text"
+                          value={entry.input}
+                          onChange={(e) => handleGearChange(g.item, e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleGearSubmit(g.item)}
+                          placeholder="Search your gear..."
+                          className="gear-box-input"
+                        />
+                        <button
+                          onClick={() => handleRecommend(g.item)}
+                          disabled={search.isSearching || search.isSearchingOnline}
+                          className="gear-box-recommend"
+                        >
+                          {search.isSearching || search.isSearchingOnline ? 'Loading...' : 'Get recommendations →'}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Validated state - show result */}
+                    {entry.status !== 'empty' && (
+                      <div className="gear-box-result">
+                        <div className="gear-box-result-header">
+                          <span style={{ color: status.color }}>{status.icon}</span>
+                          <span className="gear-box-result-name">{entry.input}</span>
+                        </div>
+                        {entry.reasons.length > 0 && (
+                          <div className={`gear-box-result-status ${entry.status}`}>
+                            {entry.status === 'ideal' && 'IDEAL'}
+                            {entry.status === 'suitable' && 'SUITABLE'}
+                            {entry.status === 'adequate' && 'MARGINAL'}
+                            {entry.status === 'unsuitable' && 'UNSUITABLE'}
+                            {' - '}{entry.reasons[0]}
                           </div>
                         )}
-                        {entry.reasons.length > 0 && !search.showResults && (
-                          <div className="text-xs text-muted mt-1">
-                            {entry.reasons[0]}
-                          </div>
-                        )}
-                      </td>
-                      <td className="text-center">
-                        <span style={{ color: status.color, fontSize: '1.25rem' }}>
-                          {status.icon}
-                        </span>
-                      </td>
-                      <td className="text-right">
-                        {entry.status === 'empty' && (
+                        <div className="gear-box-actions">
+                          <button
+                            onClick={() => {
+                              setUserGear(prev => ({
+                                ...prev,
+                                [g.item]: { input: '', status: 'empty', reasons: [] }
+                              }));
+                            }}
+                            className="gear-box-action"
+                          >
+                            Change
+                          </button>
                           <button
                             onClick={() => handleRecommend(g.item)}
-                            className="text-xs text-muted hover:text-burnt underline"
+                            disabled={search.isSearching || search.isSearchingOnline}
+                            className="gear-box-action-primary"
                           >
-                            Recommend
+                            {search.isSearching || search.isSearchingOnline ? 'Loading...' : 'Get better options →'}
                           </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Search results dropdown */}
+                    {search.showResults && (
+                      <div className="gear-box-dropdown">
+                        {search.isSearching ? (
+                          <div className="gear-box-dropdown-item text-muted">Searching...</div>
+                        ) : (
+                          <>
+                            {search.results.length === 0 ? (
+                              <div className="gear-box-dropdown-item text-muted">No matches in database</div>
+                            ) : (
+                              search.results.map((product, idx) => (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  onClick={() => handleSelectProduct(g.item, product)}
+                                  className="gear-box-dropdown-item"
+                                >
+                                  <div className="font-medium flex items-center gap-2">
+                                    {product.name}
+                                    {product.isNew && (
+                                      <span className="text-xs bg-burnt text-white px-1.5 py-0.5 rounded">NEW</span>
+                                    )}
+                                  </div>
+                                  <div className="text-xs text-muted">{product.specs}</div>
+                                </button>
+                              ))
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleOnlineSearch(g.item)}
+                              disabled={search.isSearchingOnline}
+                              className="gear-box-dropdown-online"
+                            >
+                              {search.isSearchingOnline ? (
+                                <span className="flex items-center gap-2">
+                                  <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                  </svg>
+                                  Searching online...
+                                </span>
+                              ) : (
+                                'Search online for latest →'
+                              )}
+                            </button>
+                          </>
                         )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </>
         )}
 

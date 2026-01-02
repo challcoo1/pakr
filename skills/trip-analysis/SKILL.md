@@ -13,15 +13,17 @@ Trip description (e.g., "Routeburn Track in October, 3 days").
 ```json
 {
   "trip": {
-    "description": "[user input]",
-    "activity_type": "[hiking|trekking|alpine_climbing|mountaineering|backpacking]",
-    "location": {
-      "name": "[trail name]",
-      "region": "[region]",
-      "country": "[country]"
-    },
-    "season": "[season]",
-    "duration_days": [number]
+    "name": "[trail/route name]",
+    "region": "[region, country]",
+    "timeOfYear": "[month or season]",
+    "duration": "[X days]",
+    "distance": "[Xkm]",
+    "elevation": "[Xm gain]",
+    "grading": {
+      "local": "[local grading system, e.g. NZ Track 3]",
+      "international": "[T1-T6 or equivalent]",
+      "description": "[one-line terrain description]"
+    }
   },
   "conditions": {
     "temperature": {

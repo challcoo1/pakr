@@ -47,9 +47,19 @@ export async function POST(request: Request) {
 
     // Transform to frontend format
     const trip = {
-      name: data.trip?.location?.name || data.trip?.description || objective,
-      region: data.trip?.location?.region || '',
-      duration: data.trip?.duration_days ? `${data.trip.duration_days} days` : '',
+      name: data.trip?.name || data.trip?.location?.name || objective,
+      region: data.trip?.region || data.trip?.location?.region || '',
+      timeOfYear: data.trip?.timeOfYear || '',
+      duration: data.trip?.duration || '',
+      distance: data.trip?.distance || '',
+      elevation: data.trip?.elevation || '',
+      grading: {
+        local: data.trip?.grading?.local || '',
+        international: data.trip?.grading?.international || '',
+        description: data.trip?.grading?.description || ''
+      },
+      terrain: data.conditions?.terrain?.join(', ') || '',
+      hazards: data.conditions?.hazards?.join(', ') || '',
       conditions: data.conditions?.hazards || [],
       gear: (data.gear_requirements || []).map((g: {
         item?: string;
