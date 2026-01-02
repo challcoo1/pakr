@@ -49,6 +49,7 @@ interface ProductMatch {
 
 interface GearSearchState {
   isSearching: boolean;
+  isSearchingOnline: boolean;
   results: ProductMatch[];
   showResults: boolean;
 }
@@ -238,11 +239,11 @@ export default function Home() {
     }));
     setGearSearch(prev => ({
       ...prev,
-      [item]: { isSearching: false, results: [], showResults: false }
+      [item]: { isSearching: false, isSearchingOnline: false, results: [], showResults: false }
     }));
   };
 
-  // Search for matching products (exact specs mode)
+  // Search for matching products - DB only (fast)
   const handleGearSearch = async (item: string) => {
     const entry = userGear[item];
     if (!entry?.input.trim() || entry.input.trim().length < 2) {
@@ -251,7 +252,7 @@ export default function Home() {
 
     setGearSearch(prev => ({
       ...prev,
-      [item]: { isSearching: true, results: [], showResults: true }
+      [item]: { isSearching: true, isSearchingOnline: false, results: [], showResults: true }
     }));
 
     try {
@@ -269,6 +270,7 @@ export default function Home() {
         ...prev,
         [item]: {
           isSearching: false,
+          isSearchingOnline: false,
           results: data.results || [],
           showResults: true
         }
@@ -276,7 +278,46 @@ export default function Home() {
     } catch {
       setGearSearch(prev => ({
         ...prev,
-        [item]: { isSearching: false, results: [], showResults: false }
+        [item]: { isSearching: false, isSearchingOnline: false, results: [], showResults: false }
+      }));
+    }
+  };
+
+  // Search online for latest products
+  const handleOnlineSearch = async (item: string) => {
+    const entry = userGear[item];
+    const query = entry?.input.trim() || item;
+
+    setGearSearch(prev => ({
+      ...prev,
+      [item]: { ...prev[item], isSearchingOnline: true }
+    }));
+
+    try {
+      const response = await fetch('/api/search-gear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query,
+          category: item,
+          online: true
+        }),
+      });
+      const data = await response.json();
+
+      setGearSearch(prev => ({
+        ...prev,
+        [item]: {
+          isSearching: false,
+          isSearchingOnline: false,
+          results: data.results || [],
+          showResults: true
+        }
+      }));
+    } catch {
+      setGearSearch(prev => ({
+        ...prev,
+        [item]: { ...prev[item], isSearchingOnline: false }
       }));
     }
   };
@@ -374,7 +415,7 @@ export default function Home() {
   const handleRecommend = async (item: string) => {
     setGearSearch(prev => ({
       ...prev,
-      [item]: { isSearching: true, results: [], showResults: true }
+      [item]: { isSearching: true, isSearchingOnline: false, results: [], showResults: true }
     }));
 
     try {
@@ -392,6 +433,7 @@ export default function Home() {
         ...prev,
         [item]: {
           isSearching: false,
+          isSearchingOnline: false,
           results: data.results || [],
           showResults: true
         }
@@ -399,7 +441,7 @@ export default function Home() {
     } catch {
       setGearSearch(prev => ({
         ...prev,
-        [item]: { isSearching: false, results: [], showResults: false }
+        [item]: { isSearching: false, isSearchingOnline: false, results: [], showResults: false }
       }));
     }
   };
@@ -634,28 +676,51 @@ export default function Home() {
                           className="input-small"
                         />
                         {search.showResults && (
-                          <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-y-auto">
+                          <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-72 overflow-y-auto">
                             {search.isSearching ? (
                               <div className="p-3 text-sm text-muted">Searching...</div>
-                            ) : search.results.length === 0 ? (
-                              <div className="p-3 text-sm text-muted">No matches found</div>
                             ) : (
-                              search.results.map((product, idx) => (
+                              <>
+                                {search.results.length === 0 ? (
+                                  <div className="p-3 text-sm text-muted">No matches in database</div>
+                                ) : (
+                                  search.results.map((product, idx) => (
+                                    <button
+                                      key={idx}
+                                      type="button"
+                                      onClick={() => handleSelectProduct(g.item, product)}
+                                      className="w-full text-left p-3 hover:bg-gray-50 border-b border-gray-100"
+                                    >
+                                      <div className="font-medium text-sm flex items-center gap-2">
+                                        {product.name}
+                                        {product.isNew && (
+                                          <span className="text-xs bg-burnt text-white px-1.5 py-0.5 rounded">NEW</span>
+                                        )}
+                                      </div>
+                                      <div className="text-xs text-muted">{product.specs}</div>
+                                    </button>
+                                  ))
+                                )}
+                                {/* Search online button */}
                                 <button
-                                  key={idx}
                                   type="button"
-                                  onClick={() => handleSelectProduct(g.item, product)}
-                                  className="w-full text-left p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                                  onClick={() => handleOnlineSearch(g.item)}
+                                  disabled={search.isSearchingOnline}
+                                  className="w-full text-left p-3 bg-gray-50 hover:bg-gray-100 border-t border-gray-200 text-sm text-burnt font-medium"
                                 >
-                                  <div className="font-medium text-sm flex items-center gap-2">
-                                    {product.name}
-                                    {product.isNew && (
-                                      <span className="text-xs bg-burnt text-white px-1.5 py-0.5 rounded">NEW</span>
-                                    )}
-                                  </div>
-                                  <div className="text-xs text-muted">{product.specs}</div>
+                                  {search.isSearchingOnline ? (
+                                    <span className="flex items-center gap-2">
+                                      <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                      </svg>
+                                      Searching online...
+                                    </span>
+                                  ) : (
+                                    'Search online for latest →'
+                                  )}
                                 </button>
-                              ))
+                              </>
                             )}
                           </div>
                         )}

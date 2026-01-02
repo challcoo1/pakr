@@ -19,7 +19,7 @@ const GEAR_SEARCH_SKILL = loadSkill();
 
 export async function POST(request: Request) {
   try {
-    const { query, category } = await request.json();
+    const { query, category, online } = await request.json();
 
     if (!query || query.trim().length < 2) {
       return NextResponse.json({ results: [] });
@@ -27,7 +27,13 @@ export async function POST(request: Request) {
 
     const searchTerm = query.trim().toLowerCase();
 
-    // Search DB and online in parallel
+    // DB search only by default
+    if (!online) {
+      const dbResults = await searchDatabase(searchTerm);
+      return NextResponse.json({ results: dbResults });
+    }
+
+    // Online search triggered explicitly - search both and dedupe
     const [dbResults, onlineResults] = await Promise.all([
       searchDatabase(searchTerm),
       searchOnline(query.trim(), category)
@@ -37,13 +43,9 @@ export async function POST(request: Request) {
     const dbNames = new Set(dbResults.map((g: any) => g.name.toLowerCase()));
 
     // Mark online results that are new (not in DB)
-    const onlineWithNew = onlineResults.map((g: any) => ({
-      ...g,
-      isNew: !dbNames.has(g.name.toLowerCase())
-    }));
-
-    // Filter to only truly new online results
-    const newOnline = onlineWithNew.filter((g: any) => g.isNew);
+    const newOnline = onlineResults
+      .filter((g: any) => !dbNames.has(g.name.toLowerCase()))
+      .map((g: any) => ({ ...g, isNew: true }));
 
     // Combine: DB first, then new online results
     const results = [...dbResults, ...newOnline];
@@ -91,7 +93,7 @@ async function searchOnline(query: string, category?: string) {
     });
 
     // Extract text from response
-    const textOutput = response.output.find((o: any) => o.type === 'message');
+    const textOutput = (response.output as any[]).find((o: any) => o.type === 'message');
     if (textOutput?.content) {
       const content = textOutput.content.map((c: any) => c.text).join('');
       const jsonMatch = content.match(/\[[\s\S]*\]/);
