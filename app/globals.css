@@ -756,3 +756,106 @@ body {
 :root.dark .gear-box-divider {
   background: rgba(255,255,255,0.1);
 }
+
+/* Gear Portfolio Page */
+.gear-portfolio-section {
+  background: var(--cream);
+  border: 1px solid var(--charcoal);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.gear-portfolio-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--charcoal);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.gear-portfolio-items {
+  padding: 0.5rem;
+}
+
+.gear-portfolio-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0.75rem;
+  border-radius: 3px;
+  transition: background 0.15s;
+}
+
+.gear-portfolio-item:hover {
+  background: rgba(0,0,0,0.03);
+}
+
+.gear-portfolio-item-main {
+  flex: 1;
+}
+
+.gear-portfolio-item-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--charcoal);
+}
+
+.gear-portfolio-item-specs {
+  font-size: 0.8125rem;
+  color: var(--muted);
+  margin-top: 0.125rem;
+}
+
+.gear-portfolio-item-notes {
+  font-size: 0.75rem;
+  color: var(--burnt);
+  margin-top: 0.25rem;
+  font-style: italic;
+}
+
+.gear-portfolio-item-delete {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.gear-portfolio-item:hover .gear-portfolio-item-delete {
+  opacity: 1;
+}
+
+.gear-portfolio-item-delete:hover {
+  background: rgba(0,0,0,0.05);
+  color: #c44;
+}
+
+/* Dark mode for portfolio */
+:root.dark .gear-portfolio-section {
+  background: #2a2a2a;
+  border-color: #444;
+}
+
+:root.dark .gear-portfolio-header {
+  background: #333;
+}
+
+:root.dark .gear-portfolio-item:hover {
+  background: rgba(255,255,255,0.03);
+}
+
+:root.dark .gear-portfolio-item-delete:hover {
+  background: rgba(255,255,255,0.05);
+}

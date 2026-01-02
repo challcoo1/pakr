@@ -327,6 +327,47 @@ export default function Home() {
           initial[g.item] = { input: '', status: 'empty', reasons: [] };
         });
         setUserGear(initial);
+
+        // If logged in, try to auto-populate with user's gear
+        if (session?.user) {
+          try {
+            const optimizeResponse = await fetch('/api/optimize-gear', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                requirements: analyzeData.trip.gear,
+                tripContext: {
+                  name: analyzeData.trip.name,
+                  region: analyzeData.trip.region,
+                  duration: analyzeData.trip.duration,
+                  terrain: analyzeData.trip.terrain,
+                  hazards: analyzeData.trip.hazards,
+                  conditions: analyzeData.trip.conditions,
+                },
+              }),
+            });
+            const optimizeData = await optimizeResponse.json();
+
+            if (optimizeData.matches) {
+              // Pre-populate matched gear
+              const populated: Record<string, UserGearEntry> = { ...initial };
+              for (const [itemName, match] of Object.entries(optimizeData.matches)) {
+                if (match && typeof match === 'object' && 'name' in match) {
+                  const m = match as { name: string; score: number; reason: string };
+                  populated[itemName] = {
+                    input: m.name,
+                    status: m.score >= 80 ? 'ideal' : m.score >= 60 ? 'suitable' : 'adequate',
+                    reasons: [m.reason],
+                  };
+                }
+              }
+              setUserGear(populated);
+            }
+          } catch (err) {
+            console.error('Gear optimization failed:', err);
+            // Continue without optimization - not critical
+          }
+        }
       }
     } catch (error) {
       console.error('Analysis failed:', error);
@@ -644,6 +685,12 @@ export default function Home() {
                         <div className="text-sm font-medium text-charcoal">{session.user.name}</div>
                         <div className="text-xs text-muted">{session.user.email}</div>
                       </div>
+                      <a
+                        href="/gear"
+                        className="block w-full px-3 py-2 text-left text-sm text-charcoal hover:bg-gray-100"
+                      >
+                        My Gear
+                      </a>
                       <button
                         type="button"
                         onClick={() => signOut()}
