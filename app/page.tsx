@@ -54,10 +54,26 @@ interface ProductMatch {
   isNew?: boolean;
 }
 
+interface Recommendation {
+  topPick: {
+    name: string;
+    brand: string;
+    reason: string;
+    source: string;
+  } | null;
+  alternatives: {
+    name: string;
+    brand: string;
+    comparison: string;
+    source: string;
+  }[];
+}
+
 interface GearSearchState {
   isSearching: boolean;
   isSearchingOnline: boolean;
   results: ProductMatch[];
+  recommendation: Recommendation | null;
   showResults: boolean;
 }
 
@@ -241,7 +257,7 @@ export default function Home() {
     }));
     setGearSearch(prev => ({
       ...prev,
-      [item]: { isSearching: false, isSearchingOnline: false, results: [], showResults: false }
+      [item]: { isSearching: false, isSearchingOnline: false, results: [], recommendation: null, showResults: false }
     }));
   };
 
@@ -254,7 +270,7 @@ export default function Home() {
 
     setGearSearch(prev => ({
       ...prev,
-      [item]: { isSearching: true, isSearchingOnline: false, results: [], showResults: true }
+      [item]: { isSearching: true, isSearchingOnline: false, results: [], recommendation: null, showResults: true }
     }));
 
     try {
@@ -274,13 +290,14 @@ export default function Home() {
           isSearching: false,
           isSearchingOnline: false,
           results: data.results || [],
+          recommendation: null,
           showResults: true
         }
       }));
     } catch {
       setGearSearch(prev => ({
         ...prev,
-        [item]: { isSearching: false, isSearchingOnline: false, results: [], showResults: false }
+        [item]: { isSearching: false, isSearchingOnline: false, results: [], recommendation: null, showResults: false }
       }));
     }
   };
@@ -313,13 +330,14 @@ export default function Home() {
           isSearching: false,
           isSearchingOnline: false,
           results: data.results || [],
+          recommendation: null,
           showResults: true
         }
       }));
     } catch {
       setGearSearch(prev => ({
         ...prev,
-        [item]: { ...prev[item], isSearchingOnline: false }
+        [item]: { ...prev[item], isSearchingOnline: false, recommendation: null }
       }));
     }
   };
@@ -419,7 +437,7 @@ export default function Home() {
 
     setGearSearch(prev => ({
       ...prev,
-      [item]: { isSearching: true, isSearchingOnline: false, results: [], showResults: true }
+      [item]: { isSearching: true, isSearchingOnline: false, results: [], recommendation: null, showResults: true }
     }));
 
     try {
@@ -434,6 +452,7 @@ export default function Home() {
             name: trip.name,
             region: trip.region,
             duration: trip.duration,
+            grading: trip.grading,
             conditions: trip.conditions,
             terrain: trip.terrain,
             hazards: trip.hazards
@@ -453,13 +472,14 @@ export default function Home() {
           isSearching: false,
           isSearchingOnline: false,
           results: data.results || [],
+          recommendation: data.recommendation || null,
           showResults: true
         }
       }));
     } catch {
       setGearSearch(prev => ({
         ...prev,
-        [item]: { isSearching: false, isSearchingOnline: false, results: [], showResults: false }
+        [item]: { isSearching: false, isSearchingOnline: false, results: [], recommendation: null, showResults: false }
       }));
     }
   };
@@ -664,7 +684,7 @@ export default function Home() {
             <div className="gear-boxes">
               {trip.gear.map((g) => {
                 const entry = userGear[g.item] || { input: '', status: 'empty', reasons: [] };
-                const search = gearSearch[g.item] || { isSearching: false, isSearchingOnline: false, results: [], showResults: false };
+                const search = gearSearch[g.item] || { isSearching: false, isSearchingOnline: false, results: [], recommendation: null, showResults: false };
                 const status = getStatusIndicator(entry.status);
 
                 return (
@@ -759,50 +779,87 @@ export default function Home() {
                       </div>
                     )}
 
-                    {/* Search results dropdown */}
+                    {/* Search results / Recommendations */}
                     {search.showResults && (
                       <div className="gear-box-dropdown">
                         {search.isSearching ? (
-                          <div className="gear-box-dropdown-item text-muted">Searching...</div>
-                        ) : (
+                          <div className="gear-box-dropdown-item text-muted">Finding recommendations...</div>
+                        ) : search.recommendation?.topPick ? (
                           <>
-                            {search.results.length === 0 ? (
-                              <div className="gear-box-dropdown-item text-muted">No matches in database</div>
-                            ) : (
-                              search.results.map((product, idx) => (
-                                <button
-                                  key={idx}
-                                  type="button"
-                                  onClick={() => handleSelectProduct(g.item, product)}
-                                  className="gear-box-dropdown-item"
-                                >
-                                  <div className="font-medium flex items-center gap-2">
-                                    {product.name}
-                                    {product.isNew && (
-                                      <span className="text-xs bg-burnt text-white px-1.5 py-0.5 rounded">NEW</span>
-                                    )}
-                                  </div>
-                                  <div className="text-xs text-muted">{product.specs}</div>
-                                </button>
-                              ))
+                            {/* Top Pick */}
+                            <div className="gear-rec-top">
+                              <div className="gear-rec-label">⭐ TOP PICK</div>
+                              <button
+                                type="button"
+                                onClick={() => handleSelectProduct(g.item, {
+                                  name: search.recommendation!.topPick!.name,
+                                  brand: search.recommendation!.topPick!.brand,
+                                  specs: search.recommendation!.topPick!.reason,
+                                  source: 'online'
+                                })}
+                                className="gear-rec-pick"
+                              >
+                                <div className="gear-rec-name">{search.recommendation.topPick.name}</div>
+                                <div className="gear-rec-reason">{search.recommendation.topPick.reason}</div>
+                                <div className="gear-rec-select">Select this →</div>
+                              </button>
+                            </div>
+
+                            {/* Alternatives */}
+                            {search.recommendation.alternatives.length > 0 && (
+                              <div className="gear-rec-alts">
+                                <div className="gear-rec-alt-label">ALSO CONSIDER</div>
+                                {search.recommendation.alternatives.map((alt, idx) => (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => handleSelectProduct(g.item, {
+                                      name: alt.name,
+                                      brand: alt.brand,
+                                      specs: alt.comparison,
+                                      source: 'online'
+                                    })}
+                                    className="gear-rec-alt"
+                                  >
+                                    <span className="gear-rec-alt-name">{alt.name}</span>
+                                    <span className="gear-rec-alt-diff">{alt.comparison}</span>
+                                  </button>
+                                ))}
+                              </div>
                             )}
+                          </>
+                        ) : search.results.length > 0 ? (
+                          <>
+                            {search.results.map((product, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => handleSelectProduct(g.item, product)}
+                                className="gear-box-dropdown-item"
+                              >
+                                <div className="font-medium">{product.name}</div>
+                                <div className="text-xs text-muted">{product.specs}</div>
+                              </button>
+                            ))}
                             <button
                               type="button"
                               onClick={() => handleOnlineSearch(g.item)}
                               disabled={search.isSearchingOnline}
                               className="gear-box-dropdown-online"
                             >
-                              {search.isSearchingOnline ? (
-                                <span className="flex items-center gap-2">
-                                  <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                                  </svg>
-                                  Searching online...
-                                </span>
-                              ) : (
-                                'Search online for latest →'
-                              )}
+                              {search.isSearchingOnline ? 'Searching...' : 'Search online for more →'}
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <div className="gear-box-dropdown-item text-muted">No matches found</div>
+                            <button
+                              type="button"
+                              onClick={() => handleOnlineSearch(g.item)}
+                              disabled={search.isSearchingOnline}
+                              className="gear-box-dropdown-online"
+                            >
+                              {search.isSearchingOnline ? 'Searching...' : 'Search online →'}
                             </button>
                           </>
                         )}

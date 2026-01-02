@@ -416,3 +416,91 @@ body {
   color: var(--muted);
   cursor: not-allowed;
 }
+
+/* Recommendation styles */
+.gear-rec-top {
+  padding: 1rem;
+  background: #fffef8;
+}
+
+.gear-rec-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--burnt);
+  margin-bottom: 0.5rem;
+}
+
+.gear-rec-pick {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.gear-rec-pick:hover .gear-rec-select {
+  text-decoration: underline;
+}
+
+.gear-rec-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--charcoal);
+}
+
+.gear-rec-reason {
+  font-size: 0.8125rem;
+  color: var(--muted);
+  margin-top: 0.25rem;
+}
+
+.gear-rec-select {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--burnt);
+  margin-top: 0.5rem;
+}
+
+.gear-rec-alts {
+  padding: 0.75rem 1rem;
+  background: #f5f5f5;
+  border-top: 1px solid #eee;
+}
+
+.gear-rec-alt-label {
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+
+.gear-rec-alt {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  padding: 0.375rem 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8125rem;
+}
+
+.gear-rec-alt:hover {
+  color: var(--burnt);
+}
+
+.gear-rec-alt-name {
+  font-weight: 500;
+  color: var(--charcoal);
+}
+
+.gear-rec-alt-diff {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
