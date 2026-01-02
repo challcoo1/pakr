@@ -1,8 +1,23 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession, signIn, signOut } from 'next-auth/react';
 import Link from 'next/link';
+
+const COUNTRIES = [
+  { code: 'AU', name: 'Australia' },
+  { code: 'NZ', name: 'New Zealand' },
+  { code: 'US', name: 'United States' },
+  { code: 'GB', name: 'United Kingdom' },
+  { code: 'CA', name: 'Canada' },
+  { code: 'DE', name: 'Germany' },
+  { code: 'FR', name: 'France' },
+  { code: 'JP', name: 'Japan' },
+  { code: 'CH', name: 'Switzerland' },
+  { code: 'IT', name: 'Italy' },
+];
+
+const getFlagUrl = (code: string) => `https://flagcdn.com/24x18/${code.toLowerCase()}.png`;
 
 interface GearItem {
   id: string;
@@ -54,6 +69,32 @@ export default function GearPage() {
   const [selectedGender, setSelectedGender] = useState('');
   const [addingGear, setAddingGear] = useState<ProductMatch | null>(null);
   const [gearNotes, setGearNotes] = useState('');
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+  const [userCountry, setUserCountry] = useState<{ code: string; name: string } | null>(null);
+
+  // Auto-detect country on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('pakr-country');
+    if (saved) {
+      setUserCountry(JSON.parse(saved));
+    } else {
+      fetch('https://ipapi.co/json/')
+        .then(r => r.json())
+        .then(data => {
+          const country = COUNTRIES.find(c => c.code === data.country_code);
+          if (country) setUserCountry(country);
+        })
+        .catch(() => {});
+    }
+  }, []);
+
+  // Save country preference
+  useEffect(() => {
+    if (userCountry) {
+      localStorage.setItem('pakr-country', JSON.stringify(userCountry));
+    }
+  }, [userCountry]);
 
   // Load user's gear
   useEffect(() => {
@@ -168,6 +209,18 @@ export default function GearPage() {
         <div className="red-band">
           <div className="red-band-container">
             <Link href="/" className="logo-light">pakr</Link>
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => signIn('google')}
+                className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 transition-colors flex items-center justify-center"
+                title="Sign in"
+              >
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
         <div className="main-content">
@@ -175,7 +228,7 @@ export default function GearPage() {
             <div className="text-center py-12">
               <h1 className="text-2xl font-bold mb-4">Your Gear Portfolio</h1>
               <p className="text-muted mb-6">Sign in to save and manage your gear collection.</p>
-              <Link href="/" className="btn-primary">← Back to Home</Link>
+              <button onClick={() => signIn('google')} className="btn-primary">Sign in with Google</button>
             </div>
           </div>
         </div>
@@ -189,7 +242,92 @@ export default function GearPage() {
         <div className="red-band-container">
           <Link href="/" className="logo-light">pakr</Link>
           <div className="flex items-center gap-4">
-            <span className="text-white/70 text-sm">My Gear</span>
+            {/* Country selector */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowCountryDropdown(!showCountryDropdown)}
+                className="hover:opacity-80 transition-opacity"
+                title={userCountry?.name || 'Select country'}
+              >
+                {userCountry ? (
+                  <img src={getFlagUrl(userCountry.code)} alt={userCountry.name} className="w-6 h-4 object-cover rounded-sm" />
+                ) : (
+                  <span className="text-white text-sm">🌍</span>
+                )}
+              </button>
+              {showCountryDropdown && (
+                <div className="absolute right-0 top-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 max-h-64 overflow-y-auto min-w-[180px]">
+                  {COUNTRIES.map((country) => (
+                    <button
+                      key={country.code}
+                      type="button"
+                      onClick={() => {
+                        setUserCountry(country);
+                        setShowCountryDropdown(false);
+                      }}
+                      className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2 ${userCountry?.code === country.code ? 'bg-gray-50' : ''}`}
+                    >
+                      <img src={getFlagUrl(country.code)} alt="" className="w-5 h-4 object-cover rounded-sm" />
+                      <span className="text-charcoal">{country.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* User avatar / login */}
+            <div className="relative">
+              {session?.user ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setShowUserMenu(!showUserMenu)}
+                    className="w-8 h-8 rounded-full overflow-hidden border-2 border-white/30 hover:border-white/60 transition-colors"
+                  >
+                    {session.user.image ? (
+                      <img src={session.user.image} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-white/20 flex items-center justify-center text-white text-sm font-medium">
+                        {session.user.name?.[0] || session.user.email?.[0] || '?'}
+                      </div>
+                    )}
+                  </button>
+                  {showUserMenu && (
+                    <div className="absolute right-0 top-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[160px]">
+                      <div className="px-3 py-2 border-b border-gray-100">
+                        <div className="text-sm font-medium text-charcoal">{session.user.name}</div>
+                        <div className="text-xs text-muted">{session.user.email}</div>
+                      </div>
+                      <Link
+                        href="/"
+                        className="block w-full px-3 py-2 text-left text-sm text-charcoal hover:bg-gray-100"
+                      >
+                        Home
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => signOut()}
+                        className="w-full px-3 py-2 text-left text-sm text-charcoal hover:bg-gray-100"
+                      >
+                        Sign out
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => signIn('google')}
+                  className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 transition-colors flex items-center justify-center"
+                  title="Sign in"
+                >
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

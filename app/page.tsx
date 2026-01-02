@@ -86,38 +86,40 @@ interface TripConfirm {
 }
 
 // Country data for location selector
-const COUNTRIES: { code: string; name: string; flag: string }[] = [
-  { code: 'AU', name: 'Australia', flag: '🇦🇺' },
-  { code: 'NZ', name: 'New Zealand', flag: '🇳🇿' },
-  { code: 'US', name: 'United States', flag: '🇺🇸' },
-  { code: 'GB', name: 'United Kingdom', flag: '🇬🇧' },
-  { code: 'DE', name: 'Germany', flag: '🇩🇪' },
-  { code: 'FR', name: 'France', flag: '🇫🇷' },
-  { code: 'IT', name: 'Italy', flag: '🇮🇹' },
-  { code: 'ES', name: 'Spain', flag: '🇪🇸' },
-  { code: 'CH', name: 'Switzerland', flag: '🇨🇭' },
-  { code: 'AT', name: 'Austria', flag: '🇦🇹' },
-  { code: 'CA', name: 'Canada', flag: '🇨🇦' },
-  { code: 'JP', name: 'Japan', flag: '🇯🇵' },
-  { code: 'KR', name: 'South Korea', flag: '🇰🇷' },
-  { code: 'NO', name: 'Norway', flag: '🇳🇴' },
-  { code: 'SE', name: 'Sweden', flag: '🇸🇪' },
-  { code: 'FI', name: 'Finland', flag: '🇫🇮' },
-  { code: 'CL', name: 'Chile', flag: '🇨🇱' },
-  { code: 'AR', name: 'Argentina', flag: '🇦🇷' },
-  { code: 'ZA', name: 'South Africa', flag: '🇿🇦' },
-  { code: 'IN', name: 'India', flag: '🇮🇳' },
-  { code: 'CN', name: 'China', flag: '🇨🇳' },
-  { code: 'NL', name: 'Netherlands', flag: '🇳🇱' },
-  { code: 'BE', name: 'Belgium', flag: '🇧🇪' },
-  { code: 'PL', name: 'Poland', flag: '🇵🇱' },
-  { code: 'CZ', name: 'Czech Republic', flag: '🇨🇿' },
-  { code: 'PT', name: 'Portugal', flag: '🇵🇹' },
-  { code: 'IE', name: 'Ireland', flag: '🇮🇪' },
-  { code: 'SG', name: 'Singapore', flag: '🇸🇬' },
-  { code: 'HK', name: 'Hong Kong', flag: '🇭🇰' },
-  { code: 'TW', name: 'Taiwan', flag: '🇹🇼' },
+const COUNTRIES = [
+  { code: 'AU', name: 'Australia' },
+  { code: 'NZ', name: 'New Zealand' },
+  { code: 'US', name: 'United States' },
+  { code: 'GB', name: 'United Kingdom' },
+  { code: 'DE', name: 'Germany' },
+  { code: 'FR', name: 'France' },
+  { code: 'IT', name: 'Italy' },
+  { code: 'ES', name: 'Spain' },
+  { code: 'CH', name: 'Switzerland' },
+  { code: 'AT', name: 'Austria' },
+  { code: 'CA', name: 'Canada' },
+  { code: 'JP', name: 'Japan' },
+  { code: 'KR', name: 'South Korea' },
+  { code: 'NO', name: 'Norway' },
+  { code: 'SE', name: 'Sweden' },
+  { code: 'FI', name: 'Finland' },
+  { code: 'CL', name: 'Chile' },
+  { code: 'AR', name: 'Argentina' },
+  { code: 'ZA', name: 'South Africa' },
+  { code: 'IN', name: 'India' },
+  { code: 'CN', name: 'China' },
+  { code: 'NL', name: 'Netherlands' },
+  { code: 'BE', name: 'Belgium' },
+  { code: 'PL', name: 'Poland' },
+  { code: 'CZ', name: 'Czech Republic' },
+  { code: 'PT', name: 'Portugal' },
+  { code: 'IE', name: 'Ireland' },
+  { code: 'SG', name: 'Singapore' },
+  { code: 'HK', name: 'Hong Kong' },
+  { code: 'TW', name: 'Taiwan' },
 ];
+
+const getFlagUrl = (code: string) => `https://flagcdn.com/24x18/${code.toLowerCase()}.png`;
 
 export default function Home() {
   const { data: session } = useSession();
@@ -137,7 +139,7 @@ export default function Home() {
   const [showConfirm, setShowConfirm] = useState(false);
 
   // User location
-  const [userCountry, setUserCountry] = useState<{ code: string; name: string; flag: string } | null>(null);
+  const [userCountry, setUserCountry] = useState<{ code: string; name: string } | null>(null);
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
 
   // Settings
@@ -637,10 +639,14 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => setShowCountryDropdown(!showCountryDropdown)}
-                className="text-xl hover:opacity-80 transition-opacity"
+                className="hover:opacity-80 transition-opacity"
                 title={userCountry?.name || 'Select country'}
               >
-                {userCountry?.flag || '🌍'}
+                {userCountry ? (
+                  <img src={getFlagUrl(userCountry.code)} alt={userCountry.name} className="w-6 h-4 object-cover rounded-sm" />
+                ) : (
+                  <span className="text-white text-sm">🌍</span>
+                )}
               </button>
               {showCountryDropdown && (
                 <div className="absolute right-0 top-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 max-h-64 overflow-y-auto min-w-[180px]">
@@ -654,7 +660,7 @@ export default function Home() {
                       }}
                       className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2 ${userCountry?.code === country.code ? 'bg-gray-50' : ''}`}
                     >
-                      <span>{country.flag}</span>
+                      <img src={getFlagUrl(country.code)} alt="" className="w-5 h-4 object-cover rounded-sm" />
                       <span className="text-charcoal">{country.name}</span>
                     </button>
                   ))}

@@ -1,9 +1,13 @@
 // app/api/gear/route.ts
 
 import { NextResponse } from 'next/server';
-import { sql } from '@/lib/db';
 
-// Dynamic import auth to avoid module init issues
+// Dynamic imports to avoid module init issues
+async function getDb() {
+  const { sql } = await import('@/lib/db');
+  return sql;
+}
+
 async function getAuth() {
   const { auth } = await import('@/lib/auth');
   return auth;
@@ -12,13 +16,14 @@ async function getAuth() {
 // GET - fetch user's gear portfolio
 export async function GET() {
   try {
+    const sql = await getDb();
     const auth = await getAuth();
     const session = await auth();
+
     if (!session?.user?.email) {
       return NextResponse.json({ gear: [] });
     }
 
-    // Get user ID
     const userResult = await sql`
       SELECT id FROM users WHERE email = ${session.user.email}
     `;
@@ -27,7 +32,6 @@ export async function GET() {
     }
     const userId = userResult[0].id;
 
-    // Get user's gear with catalog info
     const gear = await sql`
       SELECT
         ug.id,
@@ -64,7 +68,7 @@ export async function GET() {
 // POST - add gear to user's portfolio
 export async function POST(request: Request) {
   try {
-    // Try to get authenticated user, fall back to finding by session
+    const sql = await getDb();
     let userId: string | null = null;
 
     try {
@@ -79,7 +83,7 @@ export async function POST(request: Request) {
         }
       }
     } catch (authError) {
-      console.error('Auth error (continuing):', authError);
+      console.error('Auth error:', authError);
     }
 
     if (!userId) {
@@ -101,7 +105,6 @@ export async function POST(request: Request) {
     if (gearResult[0]) {
       gearId = gearResult[0].id;
     } else {
-      // Add to catalog
       const newGear = await sql`
         INSERT INTO gear_catalog (name, manufacturer, category, specs)
         VALUES (${name}, ${brand}, ${category}, ${JSON.stringify({ raw: specs })})
@@ -127,8 +130,10 @@ export async function POST(request: Request) {
 // DELETE - remove gear from portfolio
 export async function DELETE(request: Request) {
   try {
+    const sql = await getDb();
     const auth = await getAuth();
     const session = await auth();
+
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
@@ -140,7 +145,6 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'ID required' }, { status: 400 });
     }
 
-    // Get user
     const userResult = await sql`
       SELECT id FROM users WHERE email = ${session.user.email}
     `;
@@ -149,7 +153,6 @@ export async function DELETE(request: Request) {
     }
     const userId = userResult[0].id;
 
-    // Delete (only if owned by user)
     await sql`
       DELETE FROM user_gear
       WHERE id = ${id} AND user_id = ${userId}
