@@ -13,7 +13,7 @@ Query: "[search text]"
 
 ## OUTPUT
 
-Return up to 10 products as JSON array:
+Return matching products as JSON array:
 
 ```json
 [

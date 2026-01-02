@@ -55,7 +55,7 @@ Trip description (e.g., "Routeburn Track in October, 3 days").
    - "Sleeping bag"
    - "Tent"
 
-2. **Detailed technical specs** - Each item needs 3-5 specific requirements:
+2. **Detailed technical specs** - Each item needs specific requirements like:
    - Waterproof ratings (10,000mm+, Gore-Tex)
    - Temperature ratings (-5°C comfort)
    - Materials (down, synthetic, Vibram sole)

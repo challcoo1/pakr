@@ -10,7 +10,7 @@ User's trip objective (e.g., "Routeburn Track in New Zealand in October").
 
 ## OUTPUT FORMAT
 
-Return 1-4 matching trips as JSON array:
+Return matching trips as JSON array:
 
 ```json
 [
