@@ -66,7 +66,7 @@ Natural language trip description (e.g., "Routeburn Track in October").
 ## CATEGORIES
 
 ```
-footwear/hiking_boots
+footwear
 footwear/alpine_boots
 climbing/crampons
 climbing/ice_axe
