@@ -64,9 +64,25 @@ export async function GET() {
 // POST - add gear to user's portfolio
 export async function POST(request: Request) {
   try {
-    const auth = await getAuth();
-    const session = await auth();
-    if (!session?.user?.email) {
+    // Try to get authenticated user, fall back to finding by session
+    let userId: string | null = null;
+
+    try {
+      const auth = await getAuth();
+      const session = await auth();
+      if (session?.user?.email) {
+        const userResult = await sql`
+          SELECT id FROM users WHERE email = ${session.user.email}
+        `;
+        if (userResult[0]) {
+          userId = userResult[0].id;
+        }
+      }
+    } catch (authError) {
+      console.error('Auth error (continuing):', authError);
+    }
+
+    if (!userId) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
@@ -75,15 +91,6 @@ export async function POST(request: Request) {
     if (!name || !category) {
       return NextResponse.json({ error: 'Name and category required' }, { status: 400 });
     }
-
-    // Get or create user
-    const userResult = await sql`
-      SELECT id FROM users WHERE email = ${session.user.email}
-    `;
-    if (!userResult[0]) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-    const userId = userResult[0].id;
 
     // Find or create gear in catalog
     let gearResult = await sql`
