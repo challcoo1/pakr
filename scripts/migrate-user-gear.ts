@@ -20,6 +20,14 @@ async function migrate() {
     console.log('Adding category column...');
     await sql`ALTER TABLE user_gear ADD COLUMN IF NOT EXISTS category TEXT`;
 
+    // Add subcategory column (activity type: Run, Alpine, etc.)
+    console.log('Adding subcategory column...');
+    await sql`ALTER TABLE user_gear ADD COLUMN IF NOT EXISTS subcategory TEXT`;
+
+    // Add gender column (Men, Women, Unisex)
+    console.log('Adding gender column...');
+    await sql`ALTER TABLE user_gear ADD COLUMN IF NOT EXISTS gender TEXT`;
+
     // Add notes column
     console.log('Adding notes column...');
     await sql`ALTER TABLE user_gear ADD COLUMN IF NOT EXISTS notes TEXT`;

@@ -13,6 +13,9 @@ Return as JSON array:
   {
     "name": "[Brand + Model name only, no size/color/stock info]",
     "brand": "[Brand]",
+    "category": "[Manufacturer's category, e.g. 'Footwear', 'Shell Jackets', 'Insulated Jackets', 'Harnesses']",
+    "subcategory": "[Activity/use if provided, e.g. 'Run', 'Alpine', 'Trail']",
+    "gender": "[Manufacturer's classification: 'Men', 'Women', 'Unisex', or null if not specified]",
     "specs": "[Key specs: weight, waterproof rating, materials, features]"
   }
 ]
@@ -20,6 +23,7 @@ Return as JSON array:
 
 IMPORTANT:
 - Return PRODUCT MODELS from manufacturer catalogs, not shopping results
+- Use the MANUFACTURER'S OWN category (e.g. Arc'teryx: Men > Footwear > Run)
 - Ignore size, color, availability, price info
 - Focus on technical specs (weight in grams, waterproof rating, materials)
 - "Arc'teryx Beta AR Jacket" is correct

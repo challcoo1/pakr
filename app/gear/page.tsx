@@ -19,6 +19,9 @@ interface ProductMatch {
   id?: string;
   name: string;
   brand: string;
+  category?: string;
+  subcategory?: string;
+  gender?: string;
   specs: string;
   source?: 'database' | 'online';
 }
@@ -48,6 +51,7 @@ export default function GearPage() {
   const [searchResults, setSearchResults] = useState<ProductMatch[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedGender, setSelectedGender] = useState('');
   const [addingGear, setAddingGear] = useState<ProductMatch | null>(null);
   const [gearNotes, setGearNotes] = useState('');
 
@@ -97,6 +101,13 @@ export default function GearPage() {
   const handleSelectGear = (product: ProductMatch) => {
     setAddingGear(product);
     setSearchResults([]);
+    // Use category and gender from LLM if provided
+    if (product.category) {
+      setSelectedCategory(product.category);
+    }
+    if (product.gender) {
+      setSelectedGender(product.gender);
+    }
   };
 
   const handleSaveGear = async () => {
@@ -111,6 +122,8 @@ export default function GearPage() {
           brand: addingGear.brand,
           specs: addingGear.specs,
           category: selectedCategory,
+          subcategory: addingGear.subcategory,
+          gender: selectedGender,
           notes: gearNotes,
         }),
       });
@@ -121,6 +134,7 @@ export default function GearPage() {
         setAddingGear(null);
         setSearchQuery('');
         setSelectedCategory('');
+        setSelectedGender('');
         setGearNotes('');
       }
     } catch (error) {
@@ -217,16 +231,14 @@ export default function GearPage() {
           {/* Gear by category */}
           {!isLoading && gear.length > 0 && (
             <div className="space-y-6">
-              {Object.entries(CATEGORY_CONFIG).map(([catKey, config]) => {
-                const items = gearByCategory[catKey];
+              {Object.entries(gearByCategory).map(([category, items]) => {
                 if (!items || items.length === 0) return null;
 
                 return (
-                  <div key={catKey} className="gear-portfolio-section">
+                  <div key={category} className="gear-portfolio-section">
                     <div className="gear-portfolio-header">
-                      <span>{config.icon}</span>
-                      <span>{config.label}</span>
-                      <span className="text-muted text-sm ml-2">({items.length})</span>
+                      <span>{category.toUpperCase()}</span>
+                      <span className="text-white/60 text-sm ml-2">({items.length})</span>
                     </div>
                     <div className="gear-portfolio-items">
                       {items.map((item) => (
@@ -269,6 +281,8 @@ export default function GearPage() {
                   setAddingGear(null);
                   setSearchResults([]);
                   setSearchQuery('');
+                  setSelectedCategory('');
+                  setSelectedGender('');
                 }}
                 className="settings-close"
               >
@@ -326,20 +340,35 @@ export default function GearPage() {
                     <div className="text-sm text-muted">{addingGear.specs}</div>
                   </div>
 
-                  {/* Category selection */}
-                  <div className="mb-4">
-                    <label className="settings-label">Category</label>
-                    <select
-                      value={selectedCategory}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
-                      className="input-small w-full"
-                    >
-                      <option value="">Select category...</option>
-                      {Object.entries(CATEGORY_CONFIG).map(([key, config]) => (
-                        <option key={key} value={key}>{config.label}</option>
-                      ))}
-                    </select>
+                  {/* Category & Gender - from manufacturer */}
+                  <div className="flex gap-3 mb-4">
+                    <div className="flex-1">
+                      <label className="settings-label">Category</label>
+                      <input
+                        type="text"
+                        value={selectedCategory}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        placeholder="e.g. Shell Jackets, Footwear"
+                        className="input-small w-full"
+                      />
+                    </div>
+                    <div className="w-28">
+                      <label className="settings-label">Gender</label>
+                      <select
+                        value={selectedGender}
+                        onChange={(e) => setSelectedGender(e.target.value)}
+                        className="input-small w-full"
+                      >
+                        <option value="">-</option>
+                        <option value="Men">Men</option>
+                        <option value="Women">Women</option>
+                        <option value="Unisex">Unisex</option>
+                      </select>
+                    </div>
                   </div>
+                  {addingGear?.subcategory && (
+                    <div className="text-xs text-muted mb-4">Activity: {addingGear.subcategory}</div>
+                  )}
 
                   {/* Notes */}
                   <div className="mb-4">

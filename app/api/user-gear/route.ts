@@ -63,7 +63,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const { name, brand, specs, category, notes } = await request.json();
+    const { name, brand, specs, category, subcategory, gender, notes } = await request.json();
 
     if (!name || !category) {
       return NextResponse.json({ error: 'Name and category required' }, { status: 400 });
@@ -98,8 +98,8 @@ export async function POST(request: Request) {
 
     // Add to user's gear
     await sql`
-      INSERT INTO user_gear (user_id, gear_id, category, notes)
-      VALUES (${userId}, ${gearId}, ${category}, ${notes || null})
+      INSERT INTO user_gear (user_id, gear_id, category, subcategory, gender, notes)
+      VALUES (${userId}, ${gearId}, ${category}, ${subcategory || null}, ${gender || null}, ${notes || null})
       ON CONFLICT DO NOTHING
     `;
 
