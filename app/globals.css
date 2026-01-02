@@ -42,6 +42,36 @@ body {
   background-color: var(--forest);
 }
 
+/* Red band - full width stripe at top */
+.red-band {
+  position: sticky;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 60px;
+  background-color: #A85751;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+}
+
+.red-band-container {
+  width: 100%;
+  max-width: 56rem; /* 4xl */
+  margin: 0 auto;
+  padding: 0 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+}
+
+/* Main content area */
+.main-content {
+  background-color: var(--cream);
+  min-height: calc(100vh - 60px);
+}
+
 /* Logo */
 .logo {
   font-size: 1.5rem;
@@ -50,13 +80,30 @@ body {
   color: var(--charcoal);
 }
 
+.logo-light {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: white;
+}
+
+/* Toggle on header band */
+.toggle-light {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.875rem;
+}
+
+.toggle-light-active {
+  color: white;
+}
+
 /* Input field */
 .input-field {
   padding: 0.75rem 1rem;
   font-size: 1rem;
   font-family: inherit;
   background: white;
-  border: 2px solid var(--charcoal);
+  border: 1px solid #ccc;
   border-radius: 4px;
   color: var(--charcoal);
   outline: none;
@@ -64,6 +111,7 @@ body {
 
 .input-field:focus {
   border-color: var(--burnt);
+  border-width: 2px;
 }
 
 .input-field::placeholder {

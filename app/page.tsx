@@ -495,25 +495,30 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <header className="sticky top-0 bg-cream border-b-2 border-charcoal p-4 z-10">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-4">
-            <span className="logo">pakr</span>
-            <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
-              <span className="text-muted">{exactSpecs ? 'Exact specs' : 'General'}</span>
-              <button
-                type="button"
-                onClick={() => setExactSpecs(!exactSpecs)}
-                className={`relative w-10 h-5 rounded-full transition-colors ${exactSpecs ? 'bg-forest' : 'bg-gray-300'}`}
-              >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${exactSpecs ? 'translate-x-5' : ''}`}
-                />
-              </button>
-            </label>
-          </div>
+    <>
+      {/* Red Band - Full width stripe at top */}
+      <div className="red-band">
+        <div className="red-band-container">
+          <span className="logo-light">pakr</span>
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <span className="toggle-light">{exactSpecs ? 'Exact specs' : 'General'}</span>
+            <button
+              type="button"
+              onClick={() => setExactSpecs(!exactSpecs)}
+              className={`relative w-10 h-5 rounded-full transition-colors ${exactSpecs ? 'bg-white/30' : 'bg-white/20'}`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform shadow ${exactSpecs ? 'translate-x-5' : ''}`}
+              />
+            </button>
+          </label>
+        </div>
+      </div>
+
+      {/* Main Content - Cream background */}
+      <div className="main-content">
+        {/* Search */}
+        <div className="max-w-4xl mx-auto p-4">
           <form onSubmit={handleSearch} className="relative">
             <input
               type="text"
@@ -541,10 +546,9 @@ export default function Home() {
             </button>
           </form>
         </div>
-      </header>
 
-      {/* Results */}
-      <main className="max-w-4xl mx-auto p-4">
+        {/* Results */}
+        <main className="max-w-4xl mx-auto px-4 pb-4">
         {isLoading && !showConfirm && (
           <div className="text-center py-12 text-muted">
             Searching...
@@ -877,7 +881,8 @@ export default function Home() {
             Enter your destination above to get started
           </div>
         )}
-      </main>
-    </div>
+        </main>
+      </div>
+    </>
   );
 }
