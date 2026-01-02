@@ -1,5 +1,6 @@
 import "@/app/globals.css";
 import { ReactNode } from "react";
+import { Providers } from "@/components/providers";
 
 export const metadata = {
   title: "pakr — Your personal expedition outfitter",
@@ -14,7 +15,7 @@ export default function Layout({ children }: LayoutProps) {
   return (
     <html lang="en">
       <body>
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

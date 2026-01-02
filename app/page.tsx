@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, FormEvent } from 'react';
+import { useSession, signIn, signOut } from 'next-auth/react';
 
 interface GearRequirement {
   item: string;
@@ -119,6 +120,8 @@ const COUNTRIES: { code: string; name: string; flag: string }[] = [
 ];
 
 export default function Home() {
+  const { data: session } = useSession();
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const [objective, setObjective] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [tripResults, setTripResults] = useState<TripMatch[]>([]);
@@ -604,6 +607,53 @@ export default function Home() {
                     </button>
                   ))}
                 </div>
+              )}
+            </div>
+
+            {/* User avatar / login */}
+            <div className="relative">
+              {session?.user ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setShowUserMenu(!showUserMenu)}
+                    className="w-8 h-8 rounded-full overflow-hidden border-2 border-white/30 hover:border-white/60 transition-colors"
+                  >
+                    {session.user.image ? (
+                      <img src={session.user.image} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-white/20 flex items-center justify-center text-white text-sm font-medium">
+                        {session.user.name?.[0] || session.user.email?.[0] || '?'}
+                      </div>
+                    )}
+                  </button>
+                  {showUserMenu && (
+                    <div className="absolute right-0 top-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[160px]">
+                      <div className="px-3 py-2 border-b border-gray-100">
+                        <div className="text-sm font-medium text-charcoal">{session.user.name}</div>
+                        <div className="text-xs text-muted">{session.user.email}</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => signOut()}
+                        className="w-full px-3 py-2 text-left text-sm text-charcoal hover:bg-gray-100"
+                      >
+                        Sign out
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => signIn('google')}
+                  className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 transition-colors flex items-center justify-center"
+                  title="Sign in"
+                >
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </button>
               )}
             </div>
           </div>
