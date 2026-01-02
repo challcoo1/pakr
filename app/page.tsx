@@ -178,7 +178,7 @@ export default function Home() {
           setUserCountry(found);
         } else if (countryCode) {
           // Country not in our list, use US as fallback but show detected
-          setUserCountry({ code: countryCode, name: data.country_name || countryCode, flag: '🌍' });
+          setUserCountry({ code: countryCode, name: data.country_name || countryCode });
         }
       } catch {
         // Silent fail - location is optional
