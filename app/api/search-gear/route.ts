@@ -39,6 +39,8 @@ export async function POST(request: Request) {
       searchOnline(query.trim(), category)
     ]);
 
+    console.log('DB results:', dbResults.length, 'Online results:', onlineResults.length);
+
     // Build seen set from DB names for deduplication
     const dbNames = new Set(dbResults.map((g: any) => g.name.toLowerCase()));
 
@@ -46,6 +48,8 @@ export async function POST(request: Request) {
     const newOnline = onlineResults
       .filter((g: any) => !dbNames.has(g.name.toLowerCase()))
       .map((g: any) => ({ ...g, isNew: true }));
+
+    console.log('After dedupe, new online:', newOnline.length);
 
     // Combine: DB first, then new online results
     const results = [...dbResults, ...newOnline];
@@ -83,6 +87,8 @@ async function searchOnline(query: string, category?: string) {
       ? `Category: "${category}"\nQuery: "${query}"\n\nFind current products available for purchase.`
       : `Query: "${query}"\n\nFind current products available for purchase.`;
 
+    console.log('Online search:', query, category);
+
     const response = await openai.responses.create({
       model: 'gpt-4o',
       tools: [{ type: 'web_search' }],
@@ -96,15 +102,53 @@ async function searchOnline(query: string, category?: string) {
     const textOutput = (response.output as any[]).find((o: any) => o.type === 'message');
     if (textOutput?.content) {
       const content = textOutput.content.map((c: any) => c.text).join('');
-      const jsonMatch = content.match(/\[[\s\S]*\]/);
+      console.log('Online search response length:', content.length);
+
+      // Non-greedy match for JSON array
+      const jsonMatch = content.match(/\[[\s\S]*?\]/);
 
       if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        return parsed.map((item: any) => ({
-          ...item,
-          source: 'online'
-        }));
+        try {
+          const parsed = JSON.parse(jsonMatch[0]);
+          console.log('Online search parsed:', parsed.length, 'results');
+          return parsed.map((item: any) => ({
+            ...item,
+            source: 'online'
+          }));
+        } catch (parseError) {
+          console.error('JSON parse error:', parseError);
+          // Try bracket counting fallback
+          const lines = content.split('\n');
+          let jsonStr = '';
+          let inArray = false;
+          let bracketCount = 0;
+
+          for (const line of lines) {
+            if (line.includes('[')) inArray = true;
+            if (inArray) {
+              jsonStr += line + '\n';
+              bracketCount += (line.match(/\[/g) || []).length;
+              bracketCount -= (line.match(/\]/g) || []).length;
+              if (bracketCount === 0 && jsonStr.trim()) {
+                try {
+                  const parsed = JSON.parse(jsonStr);
+                  console.log('Fallback parsed:', parsed.length, 'results');
+                  return parsed.map((item: any) => ({
+                    ...item,
+                    source: 'online'
+                  }));
+                } catch {
+                  continue;
+                }
+              }
+            }
+          }
+        }
+      } else {
+        console.log('No JSON array found in response');
       }
+    } else {
+      console.log('No text output in response');
     }
 
     return [];
