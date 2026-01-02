@@ -2,17 +2,28 @@
 
 ## MODE 1: SEARCH (no trip context)
 
-Search for products matching query. Return as JSON array:
+Search for PRODUCT MODELS (not retailer inventory). Return the product line, not specific sizes/stock.
+
+Example: "Arc'teryx Beta AR Jacket" NOT "Arc'teryx Beta AR Jacket XL Black - In Stock"
+
+Return as JSON array:
 
 ```json
 [
   {
-    "name": "[Full product name with brand, model, color]",
+    "name": "[Brand + Model name only, no size/color/stock info]",
     "brand": "[Brand]",
-    "specs": "[Key specs: weight, materials]"
+    "specs": "[Key specs: weight, waterproof rating, materials, features]"
   }
 ]
 ```
+
+IMPORTANT:
+- Return PRODUCT MODELS from manufacturer catalogs, not shopping results
+- Ignore size, color, availability, price info
+- Focus on technical specs (weight in grams, waterproof rating, materials)
+- "Arc'teryx Beta AR Jacket" is correct
+- "Arc'teryx Beta AR Jacket XXL Teal - $599" is WRONG
 
 ## MODE 2: RECOMMEND (with trip context)
 
