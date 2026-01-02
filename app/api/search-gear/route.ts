@@ -104,45 +104,18 @@ async function searchOnline(query: string, category?: string) {
       const content = textOutput.content.map((c: any) => c.text).join('');
       console.log('Online search response length:', content.length);
 
-      // Non-greedy match for JSON array
-      const jsonMatch = content.match(/\[[\s\S]*?\]/);
-
-      if (jsonMatch) {
+      // Extract balanced JSON array using bracket counting
+      const extracted = extractJsonArray(content);
+      if (extracted) {
         try {
-          const parsed = JSON.parse(jsonMatch[0]);
+          const parsed = JSON.parse(extracted);
           console.log('Online search parsed:', parsed.length, 'results');
           return parsed.map((item: any) => ({
             ...item,
             source: 'online'
           }));
         } catch (parseError) {
-          console.error('JSON parse error:', parseError);
-          // Try bracket counting fallback
-          const lines = content.split('\n');
-          let jsonStr = '';
-          let inArray = false;
-          let bracketCount = 0;
-
-          for (const line of lines) {
-            if (line.includes('[')) inArray = true;
-            if (inArray) {
-              jsonStr += line + '\n';
-              bracketCount += (line.match(/\[/g) || []).length;
-              bracketCount -= (line.match(/\]/g) || []).length;
-              if (bracketCount === 0 && jsonStr.trim()) {
-                try {
-                  const parsed = JSON.parse(jsonStr);
-                  console.log('Fallback parsed:', parsed.length, 'results');
-                  return parsed.map((item: any) => ({
-                    ...item,
-                    source: 'online'
-                  }));
-                } catch {
-                  continue;
-                }
-              }
-            }
-          }
+          console.error('JSON parse error:', parseError, 'Content:', extracted.slice(0, 200));
         }
       } else {
         console.log('No JSON array found in response');
@@ -156,6 +129,46 @@ async function searchOnline(query: string, category?: string) {
     console.error('Online search error:', error);
     return [];
   }
+}
+
+// Extract balanced JSON array from text (handles nested brackets)
+function extractJsonArray(text: string): string | null {
+  const startIdx = text.indexOf('[');
+  if (startIdx === -1) return null;
+
+  let bracketCount = 0;
+  let inString = false;
+  let escape = false;
+
+  for (let i = startIdx; i < text.length; i++) {
+    const char = text[i];
+
+    if (escape) {
+      escape = false;
+      continue;
+    }
+
+    if (char === '\\' && inString) {
+      escape = true;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+
+    if (!inString) {
+      if (char === '[') bracketCount++;
+      if (char === ']') bracketCount--;
+
+      if (bracketCount === 0) {
+        return text.slice(startIdx, i + 1);
+      }
+    }
+  }
+
+  return null;
 }
 
 function formatSpecs(specs: any): string {
