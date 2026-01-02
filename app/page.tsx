@@ -413,6 +413,8 @@ export default function Home() {
   };
 
   const handleRecommend = async (item: string) => {
+    const requirement = trip?.gear.find(g => g.item === item);
+
     setGearSearch(prev => ({
       ...prev,
       [item]: { isSearching: true, isSearchingOnline: false, results: [], showResults: true }
@@ -424,7 +426,21 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           query: item,
-          category: item
+          category: item,
+          online: true,
+          tripContext: trip ? {
+            name: trip.name,
+            region: trip.region,
+            duration: trip.duration,
+            conditions: trip.conditions,
+            terrain: trip.terrain,
+            hazards: trip.hazards
+          } : null,
+          requirement: requirement ? {
+            item: requirement.item,
+            specs: requirement.specs,
+            priority: requirement.priority
+          } : null
         }),
       });
       const data = await response.json();

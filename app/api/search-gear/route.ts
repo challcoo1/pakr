@@ -19,7 +19,7 @@ const GEAR_SEARCH_SKILL = loadSkill();
 
 export async function POST(request: Request) {
   try {
-    const { query, category, online } = await request.json();
+    const { query, category, online, tripContext, requirement } = await request.json();
 
     if (!query || query.trim().length < 2) {
       return NextResponse.json({ results: [] });
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     // Online search triggered explicitly - search both and dedupe
     const [dbResults, onlineResults] = await Promise.all([
       searchDatabase(searchTerm),
-      searchOnline(query.trim(), category)
+      searchOnline(query.trim(), category, tripContext, requirement)
     ]);
 
     console.log('DB results:', dbResults.length, 'Online results:', onlineResults.length);
@@ -81,13 +81,28 @@ async function searchDatabase(searchTerm: string) {
   }));
 }
 
-async function searchOnline(query: string, category?: string) {
+async function searchOnline(query: string, category?: string, tripContext?: any, requirement?: any) {
   try {
-    const prompt = category
-      ? `Category: "${category}"\nQuery: "${query}"\n\nFind current products available for purchase.`
-      : `Query: "${query}"\n\nFind current products available for purchase.`;
+    let prompt = '';
 
-    console.log('Online search:', query, category);
+    // If we have trip context, build a recommendation prompt
+    if (tripContext && requirement) {
+      prompt = `Trip: ${tripContext.name} (${tripContext.region})
+Duration: ${tripContext.duration}
+Conditions: ${tripContext.conditions?.join(', ') || 'varied'}
+Terrain: ${tripContext.terrain || 'mixed'}
+
+Need: ${requirement.item}
+Requirements: ${requirement.specs}
+
+Recommend specific products suitable for this trip.`;
+    } else if (category) {
+      prompt = `Category: "${category}"\nQuery: "${query}"\n\nFind current products available for purchase.`;
+    } else {
+      prompt = `Query: "${query}"\n\nFind current products available for purchase.`;
+    }
+
+    console.log('Online search:', query, tripContext ? 'with trip context' : '');
 
     const response = await openai.responses.create({
       model: 'gpt-4o',
