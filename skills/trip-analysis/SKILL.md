@@ -2,21 +2,21 @@
 
 ## PURPOSE
 
-Analyze a trip and generate gear requirements with technical specifications.
+Analyze a trip and generate gear requirements with detailed technical specs.
 
 ## INPUT
 
-Natural language trip description (e.g., "Routeburn Track in October").
+Trip description (e.g., "Routeburn Track in October, 3 days").
 
-## OUTPUT FORMAT
+## OUTPUT
 
 ```json
 {
   "trip": {
-    "description": "[user's input]",
-    "activity_type": "[hiking|trekking|alpine_climbing|mountaineering|backpacking|ski_touring|ice_climbing]",
+    "description": "[user input]",
+    "activity_type": "[hiking|trekking|alpine_climbing|mountaineering|backpacking]",
     "location": {
-      "name": "[trail/route name]",
+      "name": "[trail name]",
       "region": "[region]",
       "country": "[country]"
     },
@@ -28,61 +28,48 @@ Natural language trip description (e.g., "Routeburn Track in October").
       "day_high_c": [number],
       "night_low_c": [number]
     },
-    "hazards": ["[hazard1]", "[hazard2]"],
-    "terrain": ["[terrain1]", "[terrain2]"]
+    "hazards": ["[hazard]"],
+    "terrain": ["[terrain type]"]
   },
   "gear_requirements": [
     {
       "category": "[category]",
-      "item": "[item name]",
+      "item": "[broad item name]",
       "requirements": {
-        "[spec1]": "[value1]",
-        "[spec2]": "[value2]"
+        "[spec]": "[specific value]"
       },
-      "reasoning": "[why this is needed for THIS trip]",
+      "reasoning": "[why needed for THIS trip]",
       "priority": "critical|recommended|optional"
     }
   ]
 }
 ```
 
-## RULES
+## REQUIREMENTS
 
-1. **Use your knowledge** - You know global trails, weather patterns, and conditions. Use that knowledge.
+1. **Use broad item names:**
+   - "Footwear" (not "hiking boots")
+   - "Rain jacket" (not "hardshell")
+   - "Insulated jacket"
+   - "Backpack"
+   - "Sleeping bag"
+   - "Tent"
 
-2. **Be specific** - Don't output generic items. Include exact specs based on conditions:
-   - ❌ "boots"
-   - ✅ "Hiking boots, waterproof, mid-ankle support"
+2. **Detailed technical specs** - Each item needs 3-5 specific requirements:
+   - Waterproof ratings (10,000mm+, Gore-Tex)
+   - Temperature ratings (-5°C comfort)
+   - Materials (down, synthetic, Vibram sole)
+   - Weight limits (under 400g)
+   - Features (hood, ankle support, ventilation)
 
-3. **Always include rain protection** - Weather is unpredictable almost everywhere.
+3. **Use your knowledge** - You know this trail's weather, terrain, and conditions.
 
-4. **Priority levels:**
-   - `critical` = Safety or trip impossible without
-   - `recommended` = Significantly improves safety/comfort
-   - `optional` = Nice to have
+4. **Always include rain protection** - Weather is unpredictable.
 
-5. **Reasoning must reference THIS trip** - Not generic advice.
+5. **Reasoning is specific** - Reference actual conditions of THIS trip.
 
-## CATEGORIES
+## PRIORITY
 
-```
-footwear
-footwear/alpine_boots
-climbing/crampons
-climbing/ice_axe
-climbing/harness
-climbing/helmet
-clothing/shells/hardshell
-clothing/shells/softshell
-clothing/insulation/down
-clothing/base_layers
-clothing/gloves
-sleep_system/sleeping_bags
-sleep_system/sleeping_pads
-shelter/tents
-accessories/trekking_poles
-accessories/gaiters
-accessories/sunglasses
-navigation/map
-safety/first_aid
-```
+- `critical` = Safety or can't do trip without
+- `recommended` = Improves safety/comfort significantly
+- `optional` = Nice to have

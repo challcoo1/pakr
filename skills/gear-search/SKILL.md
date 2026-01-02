@@ -2,40 +2,42 @@
 
 ## PURPOSE
 
-Find matching outdoor gear products from a search query.
+Find ALL matching outdoor gear products. Be exhaustive.
 
 ## INPUT
 
 ```
-Category: "[gear type user needs]"
-Query: "[user's search text]"
+Category: "[gear type]"
+Query: "[search text]"
 ```
 
-## OUTPUT FORMAT
+## OUTPUT
 
-Return 2-6 matching products as JSON array:
+Return up to 10 products as JSON array:
 
 ```json
 [
   {
-    "name": "[Full product name with color]",
+    "name": "[Full product name with version and color]",
     "brand": "[Brand]",
-    "specs": "[Key differentiating specs]"
+    "specs": "[Key specs that differentiate this product]"
   }
 ]
 ```
 
-## RULES
+## REQUIREMENTS
 
-1. **Filter by category** - Only return products matching the category type.
-2. **Use your knowledge** - You know outdoor gear brands and products.
-3. **Return ALL variants** - For a product line query like "norvan":
-   - All models (Norvan LD 4, Norvan SL 3, Norvan VT 2)
-   - All colorways as separate results (Stone Green, Black, etc.)
-   - Current version numbers (LD 4 not just LD)
-4. **Full product names** - "Arc'teryx Norvan LD 4 GTX Shoe - Stone Green"
-5. **Differentiate** - Specs should highlight what makes each option different.
-6. **Category mapping** - Interpret broadly:
-   - "Footwear" includes hiking boots, trail runners, approach shoes
-   - "Rain jacket" includes hardshells, waterproof shells
-   - "Backpack" includes packs of any size
+1. **Be exhaustive** - Return EVERY matching product you know about.
+
+2. **All variations** - For each product include:
+   - Every model in the line
+   - Every color option
+   - Current version numbers
+
+3. **Full names** - Include brand, model, version, and color in name.
+
+4. **Filter by category** - Only return products matching the category.
+
+5. **Category is broad** - "Footwear" means all shoes/boots. "Rain jacket" means all waterproof shells.
+
+6. **Detailed specs** - Include weight, materials, key features that matter.
