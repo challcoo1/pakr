@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 
 interface GearRequirement {
   item: string;
@@ -84,6 +84,40 @@ interface TripConfirm {
   duration: string;
 }
 
+// Country data for location selector
+const COUNTRIES: { code: string; name: string; flag: string }[] = [
+  { code: 'AU', name: 'Australia', flag: '🇦🇺' },
+  { code: 'NZ', name: 'New Zealand', flag: '🇳🇿' },
+  { code: 'US', name: 'United States', flag: '🇺🇸' },
+  { code: 'GB', name: 'United Kingdom', flag: '🇬🇧' },
+  { code: 'DE', name: 'Germany', flag: '🇩🇪' },
+  { code: 'FR', name: 'France', flag: '🇫🇷' },
+  { code: 'IT', name: 'Italy', flag: '🇮🇹' },
+  { code: 'ES', name: 'Spain', flag: '🇪🇸' },
+  { code: 'CH', name: 'Switzerland', flag: '🇨🇭' },
+  { code: 'AT', name: 'Austria', flag: '🇦🇹' },
+  { code: 'CA', name: 'Canada', flag: '🇨🇦' },
+  { code: 'JP', name: 'Japan', flag: '🇯🇵' },
+  { code: 'KR', name: 'South Korea', flag: '🇰🇷' },
+  { code: 'NO', name: 'Norway', flag: '🇳🇴' },
+  { code: 'SE', name: 'Sweden', flag: '🇸🇪' },
+  { code: 'FI', name: 'Finland', flag: '🇫🇮' },
+  { code: 'CL', name: 'Chile', flag: '🇨🇱' },
+  { code: 'AR', name: 'Argentina', flag: '🇦🇷' },
+  { code: 'ZA', name: 'South Africa', flag: '🇿🇦' },
+  { code: 'IN', name: 'India', flag: '🇮🇳' },
+  { code: 'CN', name: 'China', flag: '🇨🇳' },
+  { code: 'NL', name: 'Netherlands', flag: '🇳🇱' },
+  { code: 'BE', name: 'Belgium', flag: '🇧🇪' },
+  { code: 'PL', name: 'Poland', flag: '🇵🇱' },
+  { code: 'CZ', name: 'Czech Republic', flag: '🇨🇿' },
+  { code: 'PT', name: 'Portugal', flag: '🇵🇹' },
+  { code: 'IE', name: 'Ireland', flag: '🇮🇪' },
+  { code: 'SG', name: 'Singapore', flag: '🇸🇬' },
+  { code: 'HK', name: 'Hong Kong', flag: '🇭🇰' },
+  { code: 'TW', name: 'Taiwan', flag: '🇹🇼' },
+];
+
 export default function Home() {
   const [objective, setObjective] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -98,6 +132,32 @@ export default function Home() {
   // Confirmation step
   const [tripConfirm, setTripConfirm] = useState<TripConfirm | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+
+  // User location
+  const [userCountry, setUserCountry] = useState<{ code: string; name: string; flag: string } | null>(null);
+  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+
+  // Auto-detect location on mount
+  useEffect(() => {
+    const detectLocation = async () => {
+      try {
+        // Use IP-based geolocation (free, no permission needed)
+        const response = await fetch('https://ipapi.co/json/');
+        const data = await response.json();
+        const countryCode = data.country_code;
+        const found = COUNTRIES.find(c => c.code === countryCode);
+        if (found) {
+          setUserCountry(found);
+        } else if (countryCode) {
+          // Country not in our list, use US as fallback but show detected
+          setUserCountry({ code: countryCode, name: data.country_name || countryCode, flag: '🌍' });
+        }
+      } catch {
+        // Silent fail - location is optional
+      }
+    };
+    detectLocation();
+  }, []);
 
   // Extract time of year from query string
   const extractTimeOfYear = (query: string): string => {
@@ -461,6 +521,10 @@ export default function Home() {
             item: requirement.item,
             specs: requirement.specs,
             priority: requirement.priority
+          } : null,
+          userLocation: userCountry ? {
+            code: userCountry.code,
+            name: userCountry.name
           } : null
         }),
       });
@@ -500,18 +564,49 @@ export default function Home() {
       <div className="red-band">
         <div className="red-band-container">
           <span className="logo-light">pakr</span>
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <span className="toggle-light">{exactSpecs ? 'Exact specs' : 'General'}</span>
-            <button
-              type="button"
-              onClick={() => setExactSpecs(!exactSpecs)}
-              className={`relative w-10 h-5 rounded-full transition-colors ${exactSpecs ? 'bg-white/30' : 'bg-white/20'}`}
-            >
-              <span
-                className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform shadow ${exactSpecs ? 'translate-x-5' : ''}`}
-              />
-            </button>
-          </label>
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <span className="toggle-light">{exactSpecs ? 'Exact specs' : 'General'}</span>
+              <button
+                type="button"
+                onClick={() => setExactSpecs(!exactSpecs)}
+                className={`relative w-10 h-5 rounded-full transition-colors ${exactSpecs ? 'bg-white/30' : 'bg-white/20'}`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform shadow ${exactSpecs ? 'translate-x-5' : ''}`}
+                />
+              </button>
+            </label>
+            {/* Country selector */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowCountryDropdown(!showCountryDropdown)}
+                className="text-xl hover:opacity-80 transition-opacity"
+                title={userCountry?.name || 'Select country'}
+              >
+                {userCountry?.flag || '🌍'}
+              </button>
+              {showCountryDropdown && (
+                <div className="absolute right-0 top-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 max-h-64 overflow-y-auto min-w-[180px]">
+                  {COUNTRIES.map((country) => (
+                    <button
+                      key={country.code}
+                      type="button"
+                      onClick={() => {
+                        setUserCountry(country);
+                        setShowCountryDropdown(false);
+                      }}
+                      className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2 ${userCountry?.code === country.code ? 'bg-gray-50' : ''}`}
+                    >
+                      <span>{country.flag}</span>
+                      <span className="text-charcoal">{country.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 

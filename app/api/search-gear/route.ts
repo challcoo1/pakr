@@ -19,7 +19,7 @@ const GEAR_SEARCH_SKILL = loadSkill();
 
 export async function POST(request: Request) {
   try {
-    const { query, category, online, tripContext, requirement } = await request.json();
+    const { query, category, online, tripContext, requirement, userLocation } = await request.json();
 
     if (!query || query.trim().length < 2) {
       return NextResponse.json({ results: [] });
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
 
     // Recommendation mode: has trip context
     if (tripContext && requirement) {
-      const recommendation = await getRecommendation(query.trim(), category, tripContext, requirement);
+      const recommendation = await getRecommendation(query.trim(), category, tripContext, requirement, userLocation);
       return NextResponse.json({ recommendation });
     }
 
@@ -149,14 +149,18 @@ async function searchOnline(query: string, category?: string) {
   }
 }
 
-async function getRecommendation(query: string, category: string, tripContext: any, requirement: any) {
+async function getRecommendation(query: string, category: string, tripContext: any, requirement: any, userLocation?: { code: string; name: string }) {
   try {
+    const locationNote = userLocation
+      ? `\nUser location: ${userLocation.name} (${userLocation.code}) - When specs are equivalent, prefer brands with local presence for better shipping/support. Don't sacrifice quality for locality.`
+      : '';
+
     const prompt = `Trip: ${tripContext.name} (${tripContext.region})
 Duration: ${tripContext.duration}
 Grading: ${tripContext.grading?.local || ''} ${tripContext.grading?.international ? `(${tripContext.grading.international})` : ''}
 Conditions: ${tripContext.conditions?.join(', ') || 'varied'}
 Terrain: ${tripContext.terrain || 'mixed'}
-Hazards: ${tripContext.hazards || 'none noted'}
+Hazards: ${tripContext.hazards || 'none noted'}${locationNote}
 
 Need: ${requirement.item}
 Requirements: ${requirement.specs}

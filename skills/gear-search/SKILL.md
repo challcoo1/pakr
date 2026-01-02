@@ -42,3 +42,5 @@ When trip context is provided, return a clear recommendation:
 3. **Concise** - One sentence reasons, not specs lists
 4. **Max 2 alternatives** - Only include meaningfully different options
 5. **Comparison not specs** - "200g lighter" not "weighs 350g"
+6. **Specs first, always** - Judge gear on actual performance specs, not brand hype
+7. **Location as tiebreaker** - When user location is provided and specs are equivalent, prefer brands with local manufacturing/distribution (e.g., Mont in Australia, Icebreaker in NZ, La Sportiva in EU). This reduces shipping cost/time. Never sacrifice quality for locality.
