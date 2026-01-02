@@ -46,23 +46,27 @@ export async function POST(request: Request) {
       source: 'database'
     }));
 
-    // Step 2: If not enough DB results, search online via LLM
+    // Step 2: Always search online to get current products
+    const prompt = category
+      ? `Category: "${category}"\nQuery: "${query.trim()}"\n\nFind current products available for purchase.`
+      : `Query: "${query.trim()}"\n\nFind current products available for purchase.`;
+
+    // Use OpenAI with web search enabled
+    const response = await openai.responses.create({
+      model: 'gpt-4o',
+      tools: [{ type: 'web_search' }],
+      input: [
+        { role: 'system', content: GEAR_SEARCH_SKILL },
+        { role: 'user', content: prompt }
+      ],
+    });
+
     let onlineGear: any[] = [];
-    if (dbGear.length < 5) {
-      const prompt = category
-        ? `Category: "${category}"\nQuery: "${query.trim()}"\n\nSearch online for matching products.`
-        : `Query: "${query.trim()}"\n\nSearch online for matching products.`;
 
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4o',
-        messages: [
-          { role: 'system', content: GEAR_SEARCH_SKILL },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.3,
-      });
-
-      const content = response.choices[0]?.message?.content || '';
+    // Extract text from response
+    const textOutput = response.output.find((o: any) => o.type === 'message');
+    if (textOutput?.content) {
+      const content = textOutput.content.map((c: any) => c.text).join('');
       const jsonMatch = content.match(/\[[\s\S]*\]/);
 
       if (jsonMatch) {
@@ -74,14 +78,17 @@ export async function POST(request: Request) {
       }
     }
 
-    // Combine results - DB first, then online
-    const results = [...dbGear, ...onlineGear];
+    // Combine results - DB first, then online (deduplicated)
+    const seenNames = new Set(dbGear.map((g: any) => g.name.toLowerCase()));
+    const uniqueOnline = onlineGear.filter((g: any) => !seenNames.has(g.name.toLowerCase()));
+
+    const results = [...dbGear, ...uniqueOnline];
 
     return NextResponse.json({ results });
 
   } catch (error) {
     console.error('Search error:', error);
-    return NextResponse.json({ results: [] });
+    return NextResponse.json({ results: [], error: String(error) });
   }
 }
 
