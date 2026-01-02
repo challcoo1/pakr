@@ -63,16 +63,31 @@ export async function POST(request: Request) {
 }
 
 async function searchDatabase(searchTerm: string) {
+  // Split search into words
+  const words = searchTerm.toLowerCase().split(/\s+/).filter(w => w.length > 1);
+
+  if (words.length === 0) {
+    return [];
+  }
+
+  // Search using first word, then filter by all words
+  const firstWord = words[0];
   const dbResults = await sql`
     SELECT id, name, manufacturer, category, specs
     FROM gear_catalog
     WHERE
-      LOWER(name) LIKE ${'%' + searchTerm + '%'}
-      OR LOWER(manufacturer) LIKE ${'%' + searchTerm + '%'}
-    LIMIT 20
+      LOWER(name) LIKE ${'%' + firstWord + '%'}
+      OR LOWER(manufacturer) LIKE ${'%' + firstWord + '%'}
+    LIMIT 50
   `;
 
-  return dbResults.map((row: any) => ({
+  // Filter to only include results that match ALL words
+  const filtered = dbResults.filter((row: any) => {
+    const searchable = `${row.name} ${row.manufacturer || ''}`.toLowerCase();
+    return words.every(word => searchable.includes(word));
+  });
+
+  return filtered.slice(0, 20).map((row: any) => ({
     id: row.id,
     name: row.name,
     brand: row.manufacturer,
