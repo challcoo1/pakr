@@ -66,7 +66,7 @@ export default function GearPage() {
 
   const loadGear = async () => {
     try {
-      const response = await fetch('/api/user-gear');
+      const response = await fetch('/api/gear');
       const data = await response.json();
       setGear(data.gear || []);
     } catch (error) {
@@ -114,7 +114,7 @@ export default function GearPage() {
     if (!addingGear || !selectedCategory) return;
 
     try {
-      const response = await fetch('/api/user-gear', {
+      const response = await fetch('/api/gear', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -146,7 +146,7 @@ export default function GearPage() {
     if (!confirm('Remove this gear from your portfolio?')) return;
 
     try {
-      await fetch(`/api/user-gear?id=${id}`, { method: 'DELETE' });
+      await fetch(`/api/gear?id=${id}`, { method: 'DELETE' });
       await loadGear();
     } catch (error) {
       console.error('Failed to delete gear:', error);

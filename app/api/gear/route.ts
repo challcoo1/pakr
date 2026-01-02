@@ -1,4 +1,4 @@
-// app/api/user-gear/route.ts
+// app/api/gear/route.ts
 
 import { NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
