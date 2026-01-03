@@ -7,6 +7,8 @@ import { sql } from '@/lib/db';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
+console.log('[PAKR] OpenAI key prefix:', process.env.OPENAI_API_KEY?.substring(0, 15) || 'UNDEFINED');
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
