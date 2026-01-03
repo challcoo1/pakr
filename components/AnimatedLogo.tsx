@@ -25,7 +25,8 @@ export default function AnimatedLogo({
   clickable = true,
   variant = 'dark'
 }: AnimatedLogoProps) {
-  const [risen, setRisen] = useState(false);
+  const [visibleBars, setVisibleBars] = useState(0);
+  const [showShadow, setShowShadow] = useState(false);
 
   const sizeConfig = {
     small: { height: 18, barWidth: 2, gap: 2, textSize: 'text-lg' },
@@ -34,29 +35,75 @@ export default function AnimatedLogo({
   };
 
   const config = sizeConfig[size];
+  const totalBars = MOUNTAIN_PROFILE.length;
 
   useEffect(() => {
-    // Small delay then rise
-    const timer = setTimeout(() => setRisen(true), 100);
-    return () => clearTimeout(timer);
-  }, []);
+    let interval: NodeJS.Timeout;
+    let loopTimeout: NodeJS.Timeout;
+
+    const runAnimation = () => {
+      setVisibleBars(0);
+      setShowShadow(false);
+
+      interval = setInterval(() => {
+        setVisibleBars(prev => {
+          if (prev >= totalBars) {
+            clearInterval(interval);
+            // Stage 2: After bars complete, show shadow
+            setTimeout(() => setShowShadow(true), 200);
+            // Loop after a long pause (8 seconds)
+            loopTimeout = setTimeout(runAnimation, 8000);
+            return prev;
+          }
+          return prev + 1;
+        });
+      }, 80);
+    };
+
+    runAnimation();
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(loopTimeout);
+    };
+  }, [totalBars]);
 
   const logo = (
     <div className="inline-flex items-center gap-3">
-      {/* Mountain bars */}
+      {/* Mountain bars with shadow */}
       <div className="flex items-end" style={{ height: config.height, gap: config.gap }}>
         {MOUNTAIN_PROFILE.map((heightPercent, index) => {
           const barHeight = (heightPercent / 100) * config.height * 0.66;
           return (
             <div
               key={index}
-              className={variant === 'light' ? 'bg-white' : 'bg-charcoal'}
-              style={{
-                width: config.barWidth,
-                height: risen ? barHeight : 0,
-                transition: 'height 1.2s ease-out'
-              }}
-            />
+              className="relative"
+              style={{ width: config.barWidth + config.barWidth / 2, height: config.height }}
+            >
+              {/* Main bar - white, appears left to right */}
+              <div
+                className={variant === 'light' ? 'bg-white' : 'bg-charcoal'}
+                style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  width: config.barWidth,
+                  height: index < visibleBars ? barHeight : 0,
+                  transition: 'height 0.15s ease-out'
+                }}
+              />
+              {/* Shadow bar - charcoal, offset right, rises in front after main bars complete */}
+              <div
+                className="absolute bg-charcoal"
+                style={{
+                  width: config.barWidth,
+                  height: showShadow ? barHeight : 0,
+                  bottom: 0,
+                  left: config.barWidth / 2,
+                  transition: 'height 0.8s ease-out'
+                }}
+              />
+            </div>
           );
         })}
       </div>
