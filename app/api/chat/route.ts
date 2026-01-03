@@ -17,7 +17,7 @@ function loadTripAnalysisSkill(): string {
 
 const TRIP_ANALYSIS_SKILL = loadTripAnalysisSkill();
 
-const SYSTEM_PROMPT = `You are pakr, a gear gap analyzer for serious outdoor people.
+const SYSTEM_PROMPT = `You are pakr88, a gear gap analyzer for serious outdoor people.
 
 You have access to this trip analysis skill:
 

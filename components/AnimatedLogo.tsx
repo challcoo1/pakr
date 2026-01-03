@@ -128,7 +128,7 @@ export default function AnimatedLogo({
             variant === 'light' ? 'text-white' : 'text-charcoal'
           } ${config.textSize}`}
         >
-          pakr
+          pakr88
         </span>
       )}
     </div>

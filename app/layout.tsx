@@ -3,7 +3,7 @@ import { ReactNode } from "react";
 import { Providers } from "@/components/providers";
 
 export const metadata = {
-  title: "pakr — Your personal expedition outfitter",
+  title: "pakr88 — Your personal expedition outfitter",
   description: "Pack smart. Travel light. Your AI-powered gear companion for outdoor adventures.",
 };
 
