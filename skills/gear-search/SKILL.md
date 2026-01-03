@@ -6,11 +6,12 @@ Search for PRODUCT MODELS (not retailer inventory). Return the product line, not
 
 Example: "Arc'teryx Beta AR Jacket" NOT "Arc'teryx Beta AR Jacket XL Black - In Stock"
 
-Return as JSON array:
+Return as JSON object with results array:
 
 ```json
-[
-  {
+{
+  "results": [
+    {
     "name": "[Brand + Model name only, no size/color/stock info]",
     "brand": "[Brand]",
     "category": "[Manufacturer's category, e.g. 'Footwear', 'Shell Jackets', 'Insulated Jackets', 'Harnesses']",
@@ -25,10 +26,11 @@ Return as JSON array:
         "source": "[Review site name]",
         "url": "[Direct URL to the review article]",
         "rating": "[Rating if available, e.g. '4.5/5' or 'Editor's Choice']"
-      }
-    ]
-  }
-]
+        }
+      ]
+    }
+  ]
+}
 ```
 
 SEARCH RULES:

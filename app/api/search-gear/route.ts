@@ -8,7 +8,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
+  apiKey: process.env.OPENAI_API_KEY
 });
 
 function loadSkill(): string {
@@ -168,9 +168,24 @@ async function fetchFromLLM(query: string, category?: string) {
         { role: 'system', content: GEAR_SEARCH_SKILL },
         { role: 'user', content: prompt }
       ],
+      temperature: 0.3,
+      response_format: { type: 'json_object' }
     });
 
     const content = response.choices[0]?.message?.content || '';
+    // With json_object format, try parsing directly first
+    let parsed;
+    try {
+      parsed = JSON.parse(content);
+      // Handle if wrapped in object with results array
+      const results = parsed.results || parsed.products || parsed.items || (Array.isArray(parsed) ? parsed : [parsed]);
+      if (results.length > 0) {
+        console.log('LLM returned', results.length, 'results');
+        return results;
+      }
+    } catch {
+      // Fallback to extraction
+    }
     const extracted = extractJsonArray(content);
     if (extracted) {
       try {
@@ -213,10 +228,34 @@ Recommend the best ${requirement.item} for this specific trip.`;
         { role: 'system', content: GEAR_SEARCH_SKILL },
         { role: 'user', content: prompt }
       ],
+      temperature: 0.3,
+      response_format: { type: 'json_object' }
     });
 
     const content = response.choices[0]?.message?.content || '';
     if (content) {
+      // Try direct parse first with json_object format
+      try {
+        const parsed = JSON.parse(content);
+        if (parsed.topPick) {
+          return {
+            topPick: {
+              name: parsed.topPick.name,
+              brand: parsed.topPick.brand,
+              reason: parsed.topPick.reason,
+              source: 'online'
+            },
+            alternatives: (parsed.alternatives || []).map((alt: any) => ({
+              name: alt.name,
+              brand: alt.brand,
+              comparison: alt.comparison,
+              source: 'online'
+            }))
+          };
+        }
+      } catch {
+        // Fallback to extraction
+      }
 
       const extracted = extractJsonObject(content);
       if (extracted) {
