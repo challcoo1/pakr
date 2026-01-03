@@ -7,6 +7,29 @@ import { join } from 'path';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+async function fetchImageAsBase64(url: string): Promise<string | null> {
+  try {
+    console.log('[IMAGE] Fetching:', url);
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+    if (!response.ok) {
+      console.log('[IMAGE] Failed to fetch:', response.status);
+      return null;
+    }
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    const buffer = await response.arrayBuffer();
+    const base64 = Buffer.from(buffer).toString('base64');
+    console.log('[IMAGE] Converted to base64, size:', base64.length);
+    return `data:${contentType};base64,${base64}`;
+  } catch (error) {
+    console.error('[IMAGE] Error fetching:', error);
+    return null;
+  }
+}
+
 function loadSkill(): string {
   try {
     return readFileSync(join(process.cwd(), 'skills', 'gear-search', 'SKILL.md'), 'utf-8');
@@ -36,16 +59,22 @@ async function enrichItem(sql: any, id: string, name: string) {
     console.log('[ENRICH] Got imageUrl:', item.imageUrl || 'NONE');
     console.log('[ENRICH] Got reviews:', item.reviews ? 'YES' : 'NONE');
 
-    if (item.imageUrl || item.reviews) {
+    // Download image and convert to base64
+    let storedImageUrl: string | null = null;
+    if (item.imageUrl) {
+      storedImageUrl = await fetchImageAsBase64(item.imageUrl);
+    }
+
+    if (storedImageUrl || item.reviews) {
       await sql`
         UPDATE gear_catalog SET
-          image_url = COALESCE(${item.imageUrl || null}, image_url),
+          image_url = COALESCE(${storedImageUrl}, image_url),
           reviews = COALESCE(${item.reviews ? JSON.stringify(item.reviews) : null}::jsonb, reviews),
           description = COALESCE(${item.description || null}, description),
           product_url = COALESCE(${item.productUrl || null}, product_url)
         WHERE id = ${id}
       `;
-      console.log('[ENRICH] Updated DB for:', name);
+      console.log('[ENRICH] Updated DB for:', name, 'image:', storedImageUrl ? 'YES' : 'NO');
     }
   } catch (error) {
     console.error('[ENRICH] Failed:', name, error);
