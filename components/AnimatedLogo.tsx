@@ -43,12 +43,12 @@ export default function AnimatedLogo({
   const totalBars = MOUNTAIN_PROFILE.length;
 
   useEffect(() => {
-    // Animate bars appearing left to right, then stay
+    // Animate bars appearing left to right, then loop
     const interval = setInterval(() => {
       setVisibleBars(prev => {
-        if (prev >= totalBars) {
-          clearInterval(interval);
-          return prev;
+        if (prev >= totalBars + 15) {
+          // Reset after a pause
+          return 0;
         }
         return prev + 1;
       });
