@@ -17,8 +17,10 @@ function loadSkill(): string {
 }
 
 async function enrichItem(id: string, name: string) {
+  console.log('[ENRICH] Starting enrichment for:', name, 'ID:', id);
   try {
     const skill = loadSkill();
+    console.log('[ENRICH] Calling OpenAI...');
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
@@ -33,6 +35,9 @@ async function enrichItem(id: string, name: string) {
     const parsed = JSON.parse(content);
     const item = parsed.results?.[0] || parsed;
 
+    console.log('[ENRICH] Got response, imageUrl:', item.imageUrl || 'NONE');
+    console.log('[ENRICH] Got response, reviews:', item.reviews ? 'YES' : 'NONE');
+
     if (item.imageUrl || item.reviews) {
       await sql`
         UPDATE gear_catalog SET
@@ -42,10 +47,12 @@ async function enrichItem(id: string, name: string) {
           product_url = COALESCE(${item.productUrl || null}, product_url)
         WHERE id = ${id}
       `;
-      console.log('Enriched item:', name);
+      console.log('[ENRICH] Updated DB for:', name);
+    } else {
+      console.log('[ENRICH] No data to update for:', name);
     }
   } catch (error) {
-    console.error('Enrichment failed:', name, error);
+    console.error('[ENRICH] Failed:', name, error);
   }
 }
 
