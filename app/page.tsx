@@ -693,6 +693,18 @@ export default function Home() {
         <div className="red-band-container">
           <AnimatedLogo variant="light" size="small" />
           <div className="flex items-center gap-4">
+            {/* Nav links - show when logged in */}
+            {session?.user && (
+              <div className="flex items-center gap-3">
+                <a href="/gear" className="text-white/80 hover:text-white text-sm font-medium transition-colors">
+                  My Gear
+                </a>
+                <a href="/trips" className="text-white/80 hover:text-white text-sm font-medium transition-colors">
+                  My Trips
+                </a>
+              </div>
+            )}
+
             {/* Country selector */}
             <div className="relative">
               <button
