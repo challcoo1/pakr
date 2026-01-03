@@ -113,6 +113,10 @@ async function searchDatabase(searchTerm: string) {
 
 async function saveToDatabase(item: any) {
   try {
+    console.log('Saving to DB:', item.name);
+    console.log('  imageUrl:', item.imageUrl || 'NONE');
+    console.log('  reviews:', item.reviews ? JSON.stringify(item.reviews).substring(0, 100) : 'NONE');
+
     // Check if already exists
     const existing = await sql`
       SELECT id FROM gear_catalog WHERE LOWER(name) = ${item.name.toLowerCase()} LIMIT 1
@@ -183,6 +187,9 @@ async function fetchFromLLM(query: string, category?: string) {
       const results = parsed.results || parsed.products || parsed.items || (Array.isArray(parsed) ? parsed : [parsed]);
       if (results.length > 0) {
         console.log('LLM returned', results.length, 'results');
+        console.log('First result fields:', Object.keys(results[0]));
+        console.log('First result imageUrl:', results[0].imageUrl || results[0].image_url || 'NONE');
+        console.log('First result reviews:', results[0].reviews ? 'YES' : 'NONE');
         return results;
       }
     } catch {
