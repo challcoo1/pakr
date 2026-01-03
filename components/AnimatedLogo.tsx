@@ -11,17 +11,11 @@ interface AnimatedLogoProps {
 }
 
 // Mountain range profile - heights as percentages (0-100)
-// Sharp peaks like a real mountain range silhouette
 const MOUNTAIN_PROFILE = [
-  // Base to first peak
   15, 25, 40, 55, 45,
-  // Valley then sharp rise to main peak
   30, 20, 35, 55, 75, 95, 100, 90,
-  // Drop to valley
   65, 45, 35,
-  // Second peak
   50, 70, 80, 65,
-  // Final descent
   45, 30, 20, 15
 ];
 
@@ -31,7 +25,7 @@ export default function AnimatedLogo({
   clickable = true,
   variant = 'dark'
 }: AnimatedLogoProps) {
-  const [visibleBars, setVisibleBars] = useState(0);
+  const [risen, setRisen] = useState(false);
 
   const sizeConfig = {
     small: { height: 18, barWidth: 2, gap: 2, textSize: 'text-lg' },
@@ -40,46 +34,50 @@ export default function AnimatedLogo({
   };
 
   const config = sizeConfig[size];
-  const totalBars = MOUNTAIN_PROFILE.length;
 
   useEffect(() => {
-    // Animate bars appearing left to right, then loop
-    const interval = setInterval(() => {
-      setVisibleBars(prev => {
-        if (prev >= totalBars + 15) {
-          // Reset after a pause
-          return 0;
-        }
-        return prev + 1;
-      });
-    }, 120); // 120ms per bar for slow build
-
-    return () => clearInterval(interval);
-  }, [totalBars]);
+    // Animate all bars rising together
+    const timer = setTimeout(() => setRisen(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   const logo = (
     <div className="inline-flex items-center gap-2">
-      {/* Mountain bars */}
+      {/* Mountain bars with shadow */}
       <div
-        className="flex items-end"
+        className="flex items-end relative"
         style={{
           height: config.height,
           gap: config.gap
         }}
       >
         {MOUNTAIN_PROFILE.map((heightPercent, index) => (
-          <div
-            key={index}
-            className={`${variant === 'light' ? 'bg-white' : 'bg-charcoal'} transition-all duration-200 ${
-              index < visibleBars ? 'opacity-100' : 'opacity-0'
-            }`}
-            style={{
-              width: config.barWidth,
-              height: `${heightPercent}%`,
-              transform: index < visibleBars ? 'scaleY(1)' : 'scaleY(0)',
-              transformOrigin: 'bottom'
-            }}
-          />
+          <div key={index} className="relative" style={{ width: config.barWidth }}>
+            {/* Shadow bar - offset right */}
+            <div
+              className="absolute bg-charcoal/40"
+              style={{
+                width: config.barWidth,
+                height: `${heightPercent * 0.66}%`,
+                bottom: 0,
+                left: config.barWidth / 2,
+                transform: risen ? 'scaleY(1)' : 'scaleY(0)',
+                transformOrigin: 'bottom',
+                transition: 'transform 1.2s ease-out'
+              }}
+            />
+            {/* Main bar */}
+            <div
+              className={variant === 'light' ? 'bg-white' : 'bg-charcoal'}
+              style={{
+                width: config.barWidth,
+                height: `${heightPercent * 0.66}%`,
+                transform: risen ? 'scaleY(1)' : 'scaleY(0)',
+                transformOrigin: 'bottom',
+                transition: 'transform 1.2s ease-out'
+              }}
+            />
+          </div>
         ))}
       </div>
 
