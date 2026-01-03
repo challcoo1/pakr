@@ -10,19 +10,15 @@ interface AnimatedLogoProps {
   variant?: 'dark' | 'light';
 }
 
-// Mountain range profile - heights as percentages (0-100)
-// Sharp peaks like a real mountain range silhouette
-const MOUNTAIN_PROFILE = [
-  // Base to first peak
-  15, 25, 40, 55, 45,
-  // Valley then sharp rise to main peak
-  30, 20, 35, 55, 75, 95, 100, 90,
-  // Drop to valley
-  65, 45, 35,
-  // Second peak
-  50, 70, 80, 65,
-  // Final descent
-  45, 30, 20, 15
+// Mountain peaks - irregular heights for organic feel
+const PEAKS = [
+  { height: 45, width: 12, offset: 0 },
+  { height: 72, width: 14, offset: 10 },
+  { height: 58, width: 13, offset: 22 },
+  { height: 100, width: 16, offset: 33 },
+  { height: 68, width: 14, offset: 47 },
+  { height: 85, width: 15, offset: 59 },
+  { height: 52, width: 12, offset: 72 },
 ];
 
 export default function AnimatedLogo({
@@ -31,57 +27,63 @@ export default function AnimatedLogo({
   clickable = true,
   variant = 'dark'
 }: AnimatedLogoProps) {
-  const [visibleBars, setVisibleBars] = useState(0);
+  const [animated, setAnimated] = useState(false);
 
   const sizeConfig = {
-    small: { height: 18, barWidth: 2, gap: 1, textSize: 'text-lg' },
-    medium: { height: 28, barWidth: 3, gap: 1.5, textSize: 'text-2xl' },
-    large: { height: 40, barWidth: 4, gap: 2, textSize: 'text-3xl' }
+    small: { height: 22, width: 50, textSize: 'text-lg' },
+    medium: { height: 32, width: 72, textSize: 'text-2xl' },
+    large: { height: 44, width: 100, textSize: 'text-3xl' }
   };
 
   const config = sizeConfig[size];
-  const totalBars = MOUNTAIN_PROFILE.length;
 
   useEffect(() => {
-    // Animate bars appearing left to right, then loop
-    const interval = setInterval(() => {
-      setVisibleBars(prev => {
-        if (prev >= totalBars + 10) {
-          // Reset after a pause at the end
-          return 0;
-        }
-        return prev + 1;
-      });
-    }, 80); // 80ms per bar for slower build
+    // Trigger animation after mount
+    const timer = setTimeout(() => setAnimated(true), 50);
+    return () => clearTimeout(timer);
+  }, []);
 
-    return () => clearInterval(interval);
-  }, [totalBars]);
+  // Generate triangle path for a peak
+  const getTrianglePath = (peak: typeof PEAKS[0], index: number) => {
+    const baseY = 100;
+    const peakY = 100 - peak.height;
+    const leftX = peak.offset;
+    const rightX = peak.offset + peak.width;
+    const tipX = peak.offset + peak.width / 2 + (index % 2 === 0 ? -1 : 1); // Slight irregularity
+
+    return `M ${leftX} ${baseY} L ${tipX} ${peakY} L ${rightX} ${baseY} Z`;
+  };
 
   const logo = (
     <div className="inline-flex items-center gap-2">
-      {/* Mountain bars */}
-      <div
-        className="flex items-end"
-        style={{
-          height: config.height,
-          gap: config.gap
-        }}
+      {/* Mountain peaks SVG */}
+      <svg
+        viewBox="0 0 85 100"
+        style={{ height: config.height, width: config.width }}
+        className="overflow-visible"
       >
-        {MOUNTAIN_PROFILE.map((heightPercent, index) => (
-          <div
+        <defs>
+          {/* Gradient from burnt orange to forest green */}
+          <linearGradient id={`mountain-gradient-${variant}`} x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stopColor={variant === 'light' ? '#ffffff' : '#CC5500'} stopOpacity={variant === 'light' ? '0.7' : '0.9'} />
+            <stop offset="100%" stopColor={variant === 'light' ? '#ffffff' : '#2C5530'} stopOpacity="1" />
+          </linearGradient>
+        </defs>
+
+        {PEAKS.map((peak, index) => (
+          <path
             key={index}
-            className={`${variant === 'light' ? 'bg-white' : 'bg-charcoal'} transition-all duration-150 ${
-              index < visibleBars ? 'opacity-100' : 'opacity-0'
-            }`}
+            d={getTrianglePath(peak, index)}
+            fill={`url(#mountain-gradient-${variant})`}
             style={{
-              width: config.barWidth,
-              height: `${heightPercent}%`,
-              transform: index < visibleBars ? 'scaleY(1)' : 'scaleY(0)',
-              transformOrigin: 'bottom'
+              transform: animated ? 'scaleY(1)' : 'scaleY(0)',
+              transformOrigin: 'bottom',
+              transition: `transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${index * 0.12}s`,
+              opacity: animated ? 1 : 0,
             }}
           />
         ))}
-      </div>
+      </svg>
 
       {/* Text */}
       {showText && (
@@ -89,6 +91,10 @@ export default function AnimatedLogo({
           className={`font-bold tracking-tight ${
             variant === 'light' ? 'text-white' : 'text-charcoal'
           } ${config.textSize}`}
+          style={{
+            opacity: animated ? 1 : 0,
+            transition: 'opacity 0.5s ease-out 0.9s'
+          }}
         >
           pakr
         </span>
