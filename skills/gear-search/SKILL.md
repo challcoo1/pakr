@@ -22,8 +22,8 @@ Return as JSON array:
     "productUrl": "[URL to manufacturer's product page]",
     "reviews": [
       {
-        "source": "[Review site name, e.g. 'Outdoor Gear Lab', 'Switchback Travel', 'REI']",
-        "url": "[URL to the review]",
+        "source": "[Review site name]",
+        "url": "[Direct URL to the review article]",
         "rating": "[Rating if available, e.g. '4.5/5' or 'Editor's Choice']"
       }
     ]
@@ -40,6 +40,12 @@ IMPORTANT:
 - Focus on technical specs (weight in grams, waterproof rating, materials)
 - "Arc'teryx Beta AR Jacket" is correct
 - "Arc'teryx Beta AR Jacket XXL Teal - $599" is WRONG
+
+ENRICHMENT PRIORITY:
+- **imageUrl**: Get the product image URL from manufacturer's website when available
+- **description**: Get the manufacturer's product description (1-2 sentences)
+- **reviews**: Find 2-3 reviews from trusted outdoor gear sites when available:
+  * Outdoor Gear Lab, Switchback Travel, REI, GearJunkie, Backcountry, CleverHiker
 
 ## MODE 2: RECOMMEND (with trip context)
 
