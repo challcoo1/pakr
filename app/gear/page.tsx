@@ -25,9 +25,17 @@ interface GearItem {
   brand: string;
   category: string;
   subcategory?: string;
+  gender?: string;
+  imageUrl?: string;
   specs: string;
   notes?: string;
   addedAt: string;
+}
+
+interface Review {
+  source: string;
+  url: string;
+  rating?: string;
 }
 
 interface ProductMatch {
@@ -37,6 +45,10 @@ interface ProductMatch {
   category?: string;
   subcategory?: string;
   gender?: string;
+  imageUrl?: string;
+  description?: string;
+  productUrl?: string;
+  reviews?: Review[];
   specs: string;
   source?: 'database' | 'online';
 }
@@ -72,6 +84,7 @@ export default function GearPage() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [userCountry, setUserCountry] = useState<{ code: string; name: string } | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
 
   // Auto-detect country on mount
   useEffect(() => {
@@ -165,6 +178,7 @@ export default function GearPage() {
           category: selectedCategory,
           subcategory: addingGear.subcategory,
           gender: selectedGender,
+          imageUrl: addingGear.imageUrl,
           notes: gearNotes,
         }),
       });
@@ -177,6 +191,7 @@ export default function GearPage() {
         setSelectedCategory('');
         setSelectedGender('');
         setGearNotes('');
+        setShowDetails(false);
       }
     } catch (error) {
       console.error('Failed to save gear:', error);
@@ -381,9 +396,19 @@ export default function GearPage() {
                     <div className="gear-portfolio-items">
                       {items.map((item) => (
                         <div key={item.id} className="gear-portfolio-item">
+                          {item.imageUrl && (
+                            <img
+                              src={item.imageUrl}
+                              alt={item.name}
+                              className="w-16 h-16 object-cover rounded flex-shrink-0"
+                            />
+                          )}
                           <div className="gear-portfolio-item-main">
                             <div className="gear-portfolio-item-name">{item.name}</div>
                             <div className="gear-portfolio-item-specs">{item.specs}</div>
+                            {item.gender && (
+                              <span className="text-xs text-muted">{item.gender}</span>
+                            )}
                             {item.notes && (
                               <div className="gear-portfolio-item-notes">{item.notes}</div>
                             )}
@@ -421,6 +446,7 @@ export default function GearPage() {
                   setSearchQuery('');
                   setSelectedCategory('');
                   setSelectedGender('');
+                  setShowDetails(false);
                 }}
                 className="settings-close"
               >
@@ -455,16 +481,24 @@ export default function GearPage() {
 
                   {/* Results */}
                   {searchResults.length > 0 && (
-                    <div className="gear-box-dropdown" style={{ maxHeight: '250px' }}>
+                    <div className="gear-box-dropdown" style={{ maxHeight: '300px' }}>
                       {searchResults.map((product, idx) => (
                         <button
                           key={idx}
                           type="button"
                           onClick={() => handleSelectGear(product)}
-                          className="gear-box-dropdown-item"
+                          className="gear-box-dropdown-item flex items-center gap-3"
                         >
-                          <div className="font-medium">{product.name}</div>
-                          <div className="text-xs text-muted">{product.specs}</div>
+                          {product.imageUrl && (
+                            <img src={product.imageUrl} alt="" className="w-12 h-12 object-cover rounded flex-shrink-0" />
+                          )}
+                          <div className="flex-1 text-left">
+                            <div className="font-medium">{product.name}</div>
+                            <div className="text-xs text-muted">{product.specs}</div>
+                            {product.category && (
+                              <div className="text-xs text-blue-600">{product.category} {product.gender && `• ${product.gender}`}</div>
+                            )}
+                          </div>
                         </button>
                       ))}
                     </div>
@@ -474,8 +508,58 @@ export default function GearPage() {
                 <>
                   {/* Selected gear details */}
                   <div className="mb-4 p-3 bg-gray-50 rounded">
-                    <div className="font-medium">{addingGear.name}</div>
-                    <div className="text-sm text-muted">{addingGear.specs}</div>
+                    <div className="flex items-center gap-3">
+                      {addingGear.imageUrl && (
+                        <img src={addingGear.imageUrl} alt="" className="w-16 h-16 object-cover rounded flex-shrink-0" />
+                      )}
+                      <div className="flex-1">
+                        <div className="font-medium">{addingGear.name}</div>
+                        <div className="text-sm text-muted">{addingGear.specs}</div>
+                        {addingGear.productUrl && (
+                          <a href={addingGear.productUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
+                            View on manufacturer site
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Expandable description & reviews */}
+                    {(addingGear.description || addingGear.reviews?.length) && (
+                      <div className="mt-3 border-t pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowDetails(!showDetails)}
+                          className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                        >
+                          {showDetails ? '▼' : '▶'} Details & Reviews
+                        </button>
+                        {showDetails && (
+                          <div className="mt-2 text-sm space-y-2">
+                            {addingGear.description && (
+                              <p className="text-gray-600">{addingGear.description}</p>
+                            )}
+                            {addingGear.reviews && addingGear.reviews.length > 0 && (
+                              <div>
+                                <div className="font-medium text-xs text-gray-500 mb-1">REVIEWS</div>
+                                <div className="space-y-1">
+                                  {addingGear.reviews.map((review, idx) => (
+                                    <a
+                                      key={idx}
+                                      href={review.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="block text-blue-600 hover:underline text-xs"
+                                    >
+                                      {review.source} {review.rating && `(${review.rating})`}
+                                    </a>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Category & Gender - from manufacturer */}

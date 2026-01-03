@@ -76,7 +76,7 @@ async function searchDatabase(searchTerm: string) {
   // Search using first word, then filter by all words
   const firstWord = words[0];
   const dbResults = await sql`
-    SELECT id, name, manufacturer, category, specs
+    SELECT id, name, manufacturer, category, subcategory, gender, image_url, specs
     FROM gear_catalog
     WHERE
       LOWER(name) LIKE ${'%' + firstWord + '%'}
@@ -94,6 +94,10 @@ async function searchDatabase(searchTerm: string) {
     id: row.id,
     name: row.name,
     brand: row.manufacturer,
+    category: row.category,
+    subcategory: row.subcategory,
+    gender: row.gender,
+    imageUrl: row.image_url,
     specs: formatSpecs(row.specs),
     source: 'database'
   }));

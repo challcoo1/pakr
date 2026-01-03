@@ -16,14 +16,26 @@ Return as JSON array:
     "category": "[Manufacturer's category, e.g. 'Footwear', 'Shell Jackets', 'Insulated Jackets', 'Harnesses']",
     "subcategory": "[Activity/use if provided, e.g. 'Run', 'Alpine', 'Trail']",
     "gender": "[Manufacturer's classification: 'Men', 'Women', 'Unisex', or null if not specified]",
-    "specs": "[Key specs: weight, waterproof rating, materials, features]"
+    "specs": "[Key specs: weight, waterproof rating, materials, features]",
+    "imageUrl": "[Product image URL from manufacturer's website, or null if not found]",
+    "description": "[Manufacturer's product description, 1-2 sentences]",
+    "productUrl": "[URL to manufacturer's product page]",
+    "reviews": [
+      {
+        "source": "[Review site name, e.g. 'Outdoor Gear Lab', 'Switchback Travel', 'REI']",
+        "url": "[URL to the review]",
+        "rating": "[Rating if available, e.g. '4.5/5' or 'Editor's Choice']"
+      }
+    ]
   }
 ]
 ```
 
 IMPORTANT:
 - Return PRODUCT MODELS from manufacturer catalogs, not shopping results
-- Use the MANUFACTURER'S OWN category (e.g. Arc'teryx: Men > Footwear > Run)
+- ALWAYS include "category" field - extract from manufacturer's site (e.g. "Footwear", "Shell Jackets", "Insulated Jackets")
+- ALWAYS include "gender" field - extract from manufacturer's site (e.g. "Men", "Women", "Unisex")
+- Use the MANUFACTURER'S OWN category (e.g. Arc'teryx: Men > Footwear > Run means category="Footwear", gender="Men")
 - Ignore size, color, availability, price info
 - Focus on technical specs (weight in grams, waterproof rating, materials)
 - "Arc'teryx Beta AR Jacket" is correct
