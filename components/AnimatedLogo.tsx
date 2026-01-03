@@ -71,14 +71,14 @@ export default function AnimatedLogo({
   const logo = (
     <div className="inline-flex items-center gap-3">
       {/* Mountain bars with shadow */}
-      <div className="flex items-end" style={{ height: config.height, gap: config.gap }}>
+      <div className="flex items-end relative" style={{ height: config.height, gap: config.gap }}>
         {MOUNTAIN_PROFILE.map((heightPercent, index) => {
-          const barHeight = (heightPercent / 100) * config.height * 0.66;
+          const barHeight = (heightPercent / 100) * config.height;
           return (
             <div
               key={index}
               className="relative"
-              style={{ width: config.barWidth + config.barWidth / 2, height: config.height }}
+              style={{ width: config.barWidth, height: config.height }}
             >
               {/* Main bar - white, appears left to right */}
               <div
@@ -92,20 +92,33 @@ export default function AnimatedLogo({
                   transition: 'height 0.15s ease-out'
                 }}
               />
-              {/* Shadow bar - charcoal, offset right, rises in front after main bars complete */}
-              <div
-                className="absolute bg-charcoal"
-                style={{
-                  width: config.barWidth,
-                  height: showShadow ? barHeight : 0,
-                  bottom: 0,
-                  left: config.barWidth / 2,
-                  transition: 'height 0.8s ease-out'
-                }}
-              />
             </div>
           );
         })}
+        {/* Charcoal shadow overlay - no gaps, solid block */}
+        <div
+          className="absolute flex items-end"
+          style={{
+            left: config.barWidth / 2,
+            bottom: 0,
+            height: config.height
+          }}
+        >
+          {MOUNTAIN_PROFILE.map((heightPercent, index) => {
+            const shadowHeight = (heightPercent / 100) * config.height * 0.45;
+            return (
+              <div
+                key={index}
+                className="bg-charcoal"
+                style={{
+                  width: config.barWidth + config.gap,
+                  height: showShadow ? shadowHeight : 0,
+                  transition: 'height 0.8s ease-out'
+                }}
+              />
+            );
+          })}
+        </div>
       </div>
 
       {/* Text */}
