@@ -31,25 +31,34 @@ Return as JSON array:
 ]
 ```
 
-IMPORTANT:
-- Return PRODUCT MODELS from manufacturer catalogs, not shopping results
-- ALWAYS include "category" field - extract from manufacturer's site (e.g. "Footwear", "Shell Jackets", "Insulated Jackets")
-- ALWAYS include "gender" field - extract from manufacturer's site (e.g. "Men", "Women", "Unisex")
-- Use the MANUFACTURER'S OWN category (e.g. Arc'teryx: Men > Footwear > Run means category="Footwear", gender="Men")
-- Ignore size, color, availability, price info
-- Focus on technical specs (weight in grams, waterproof rating, materials)
-- "Arc'teryx Beta AR Jacket" is correct
-- "Arc'teryx Beta AR Jacket XXL Teal - $599" is WRONG
+SEARCH RULES:
+1. Return PRODUCT MODELS from manufacturer catalogs, not shopping results
+2. Base/standard model FIRST - "Beta AR" before "Beta AR Pro" or "Beta LT"
+3. Include Men's and Women's versions as separate entries if both exist
+4. Ignore size, color, availability, price info
+5. "Arc'teryx Beta AR Jacket" is correct
+6. "Arc'teryx Beta AR Jacket XXL Teal - $599" is WRONG
 
-ENRICHMENT PRIORITY:
-- **imageUrl**: Get a product image URL. Try in order:
-  1. Manufacturer's website
-  2. REI or Backcountry product page
-  3. Review site (Outdoor Gear Lab, Switchback Travel)
-  For discontinued products, use retailer or review site images.
-- **description**: Get the manufacturer's product description (1-2 sentences)
-- **reviews**: Find 2-3 reviews from trusted outdoor gear sites when available:
-  * Outdoor Gear Lab, Switchback Travel, REI, GearJunkie, Backcountry, CleverHiker
+REQUIRED FIELDS (always include):
+- **name**: Brand + Model (e.g. "Arc'teryx Beta AR Jacket")
+- **brand**: Manufacturer name
+- **category**: From manufacturer's site (e.g. "Shell Jackets", "Footwear")
+- **gender**: "Men", "Women", or "Unisex"
+- **specs**: Weight, materials, waterproof rating, key features
+- **description**: 1-2 sentence product description from manufacturer
+
+IMAGE URL (important):
+- Get from manufacturer's product page (e.g. arcteryx.com, patagonia.com)
+- For discontinued products, use REI, Backcountry, or Outdoor Gear Lab
+- Use direct image URLs ending in .jpg, .png, .webp
+- Do NOT use Google Images, CDN thumbnails, or search result URLs
+
+REVIEWS (include 2-3 when available):
+- Outdoor Gear Lab (outdoorgearlab.com)
+- Switchback Travel (switchbacktravel.com)
+- REI Co-op reviews (rei.com)
+- GearJunkie (gearjunkie.com)
+- CleverHiker (cleverhiker.com)
 
 ## MODE 2: RECOMMEND (with trip context)
 
