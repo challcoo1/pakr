@@ -428,7 +428,8 @@ export default function Home() {
       if (response.ok) {
         setShowSaveModal(false);
         setPlannedDate('');
-        alert('Trip saved! View it in My Trips.');
+        // Redirect to My Trips
+        window.location.href = '/trips';
       }
     } catch (error) {
       console.error('Failed to save trip:', error);
