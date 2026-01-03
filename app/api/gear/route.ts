@@ -7,29 +7,6 @@ import { join } from 'path';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-async function fetchImageAsBase64(url: string): Promise<string | null> {
-  try {
-    console.log('[IMAGE] Fetching:', url);
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
-    });
-    if (!response.ok) {
-      console.log('[IMAGE] Failed to fetch:', response.status);
-      return null;
-    }
-    const contentType = response.headers.get('content-type') || 'image/jpeg';
-    const buffer = await response.arrayBuffer();
-    const base64 = Buffer.from(buffer).toString('base64');
-    console.log('[IMAGE] Converted to base64, size:', base64.length);
-    return `data:${contentType};base64,${base64}`;
-  } catch (error) {
-    console.error('[IMAGE] Error fetching:', error);
-    return null;
-  }
-}
-
 function loadSkill(): string {
   try {
     return readFileSync(join(process.cwd(), 'skills', 'gear-search', 'SKILL.md'), 'utf-8');
@@ -56,25 +33,17 @@ async function enrichItem(sql: any, id: string, name: string) {
     const parsed = JSON.parse(content);
     const item = parsed.results?.[0] || parsed;
 
-    console.log('[ENRICH] Got imageUrl:', item.imageUrl || 'NONE');
     console.log('[ENRICH] Got reviews:', item.reviews ? 'YES' : 'NONE');
 
-    // Download image and convert to base64
-    let storedImageUrl: string | null = null;
-    if (item.imageUrl) {
-      storedImageUrl = await fetchImageAsBase64(item.imageUrl);
-    }
-
-    if (storedImageUrl || item.reviews) {
+    if (item.reviews || item.description || item.productUrl) {
       await sql`
         UPDATE gear_catalog SET
-          image_url = COALESCE(${storedImageUrl}, image_url),
           reviews = COALESCE(${item.reviews ? JSON.stringify(item.reviews) : null}::jsonb, reviews),
           description = COALESCE(${item.description || null}, description),
           product_url = COALESCE(${item.productUrl || null}, product_url)
         WHERE id = ${id}
       `;
-      console.log('[ENRICH] Updated DB for:', name, 'image:', storedImageUrl ? 'YES' : 'NO');
+      console.log('[ENRICH] Updated DB for:', name);
     }
   } catch (error) {
     console.error('[ENRICH] Failed:', name, error);
@@ -218,11 +187,11 @@ export async function POST(request: Request) {
           reviews = COALESCE(${reviews ? JSON.stringify(reviews) : null}::jsonb, reviews)
         WHERE id = ${gearId}
       `;
-      // Check if still incomplete - enrich if missing image or reviews
+      // Check if still incomplete - enrich if missing reviews
       const checkResult = await sql`
-        SELECT image_url, reviews FROM gear_catalog WHERE id = ${gearId}
+        SELECT reviews FROM gear_catalog WHERE id = ${gearId}
       `;
-      if (!checkResult[0]?.image_url || !checkResult[0]?.reviews) {
+      if (!checkResult[0]?.reviews) {
         console.log('[GEAR POST] Item incomplete, enriching:', name);
         await enrichItem(sql, gearId, name);
       }
@@ -233,8 +202,8 @@ export async function POST(request: Request) {
         RETURNING id
       `;
       gearId = newGear[0].id;
-      // Enrich new items if no image or reviews provided
-      if (!imageUrl || !reviews) {
+      // Enrich new items if no reviews provided
+      if (!reviews) {
         console.log('[GEAR POST] New item, enriching:', name);
         await enrichItem(sql, gearId, name);
       }
