@@ -146,6 +146,11 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
+  // Save trip
+  const [isSavingTrip, setIsSavingTrip] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [plannedDate, setPlannedDate] = useState('');
+
   // Load settings from localStorage on mount
   useEffect(() => {
     const savedSpecs = localStorage.getItem('pakr-specs-mode');
@@ -375,6 +380,59 @@ export default function Home() {
       console.error('Analysis failed:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Save trip setup
+  const handleSaveTrip = async () => {
+    if (!trip || !session) return;
+
+    setIsSavingTrip(true);
+    try {
+      // Collect gear entries
+      const gearList = trip.gear.map(g => {
+        const entry = userGear[g.item];
+        return {
+          name: entry?.input || g.item,
+          category: g.category,
+          isOwned: entry?.status !== 'empty' && entry?.input,
+          isRecommended: !entry?.input,
+        };
+      }).filter(g => g.isOwned || g.isRecommended);
+
+      // Find missing gear (empty entries)
+      const missingGear = trip.gear
+        .filter(g => !userGear[g.item]?.input || userGear[g.item]?.status === 'empty')
+        .map(g => g.item);
+
+      const response = await fetch('/api/trips', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          trip: {
+            name: trip.name,
+            region: trip.region,
+            duration: trip.duration,
+            terrain: trip.terrain,
+            conditions: trip.conditions,
+            grading: trip.grading,
+            hazards: trip.hazards,
+          },
+          gear: gearList,
+          missingGear: missingGear.length > 0 ? missingGear : null,
+          plannedDate: plannedDate || null,
+        }),
+      });
+
+      if (response.ok) {
+        setShowSaveModal(false);
+        setPlannedDate('');
+        alert('Trip saved! View it in My Trips.');
+      }
+    } catch (error) {
+      console.error('Failed to save trip:', error);
+    } finally {
+      setIsSavingTrip(false);
     }
   };
 
@@ -696,6 +754,12 @@ export default function Home() {
                         className="block w-full px-3 py-2 text-left text-sm text-charcoal hover:bg-gray-100"
                       >
                         My Gear
+                      </a>
+                      <a
+                        href="/trips"
+                        className="block w-full px-3 py-2 text-left text-sm text-charcoal hover:bg-gray-100"
+                      >
+                        My Trips
                       </a>
                       <button
                         type="button"
@@ -1095,6 +1159,22 @@ export default function Home() {
                 );
               })}
             </div>
+
+            {/* Save Trip Button */}
+            <div className="mt-6 flex justify-center">
+              <button
+                onClick={() => {
+                  if (!session) {
+                    signIn('google');
+                  } else {
+                    setShowSaveModal(true);
+                  }
+                }}
+                className="btn-primary px-8"
+              >
+                Save Trip Setup
+              </button>
+            </div>
           </>
         )}
 
@@ -1180,6 +1260,56 @@ export default function Home() {
                 className="settings-save"
               >
                 Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Save Trip Modal */}
+      {showSaveModal && trip && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowSaveModal(false)}>
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
+            <h2 className="text-lg font-bold mb-2">Save Trip Setup</h2>
+            <p className="text-sm text-muted mb-4">{trip.name}</p>
+
+            {/* Missing gear warning */}
+            {trip.gear.some(g => !userGear[g.item]?.input || userGear[g.item]?.status === 'empty') && (
+              <div className="bg-orange-50 border border-orange-200 rounded p-3 mb-4">
+                <div className="text-sm font-medium text-orange-800 mb-1">Missing gear:</div>
+                <div className="text-xs text-orange-700">
+                  {trip.gear
+                    .filter(g => !userGear[g.item]?.input || userGear[g.item]?.status === 'empty')
+                    .map(g => g.item)
+                    .join(', ')}
+                </div>
+                <div className="text-xs text-orange-600 mt-1">You can still save and add gear later.</div>
+              </div>
+            )}
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-1">Planned Date (optional)</label>
+              <input
+                type="date"
+                value={plannedDate}
+                onChange={e => setPlannedDate(e.target.value)}
+                className="w-full border rounded px-3 py-2"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowSaveModal(false)}
+                className="flex-1 px-4 py-2 border rounded hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveTrip}
+                disabled={isSavingTrip}
+                className="flex-1 px-4 py-2 bg-red-700 text-white rounded hover:bg-red-800 disabled:opacity-50"
+              >
+                {isSavingTrip ? 'Saving...' : 'Save Trip'}
               </button>
             </div>
           </div>
