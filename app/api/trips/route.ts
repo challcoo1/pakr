@@ -138,6 +138,33 @@ export async function POST(request: Request) {
             ${g.isRecommended || false}
           )
         `;
+
+        // Also add owned gear to user's portfolio
+        if (g.isOwned && g.name) {
+          // Find or create in gear_catalog
+          let catalogResult = await sql`
+            SELECT id FROM gear_catalog WHERE LOWER(name) = ${g.name.toLowerCase()} LIMIT 1
+          `;
+
+          let catalogId;
+          if (catalogResult[0]) {
+            catalogId = catalogResult[0].id;
+          } else {
+            const newCatalog = await sql`
+              INSERT INTO gear_catalog (name, category)
+              VALUES (${g.name}, ${g.category || null})
+              RETURNING id
+            `;
+            catalogId = newCatalog[0].id;
+          }
+
+          // Add to user_gear if not already there
+          await sql`
+            INSERT INTO user_gear (user_id, gear_id, category)
+            VALUES (${userId}, ${catalogId}, ${g.category || null})
+            ON CONFLICT DO NOTHING
+          `;
+        }
       }
     }
 
