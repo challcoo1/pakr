@@ -1002,29 +1002,8 @@ export default function Home() {
 
                     <div className="gear-box-divider" />
 
-                    {/* Empty state - show search */}
-                    {entry.status === 'empty' && !entry.input && (
-                      <div className="gear-box-input-row">
-                        <input
-                          type="text"
-                          value={entry.input}
-                          onChange={(e) => handleGearChange(g.item, e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleGearSubmit(g.item)}
-                          placeholder="Search your gear..."
-                          className="gear-box-input"
-                        />
-                        <button
-                          onClick={() => handleRecommend(g.item)}
-                          disabled={search.isSearching || search.isSearchingOnline}
-                          className="gear-box-recommend"
-                        >
-                          {search.isSearching || search.isSearchingOnline ? 'Loading...' : 'Get recommendations →'}
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Has input but not validated yet */}
-                    {entry.input && entry.status === 'empty' && (
+                    {/* Empty/typing state - show search input */}
+                    {entry.status === 'empty' && (
                       <div className="gear-box-input-row">
                         <input
                           type="text"
