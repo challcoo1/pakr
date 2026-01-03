@@ -49,11 +49,14 @@ REQUIRED FIELDS (always include):
 - **specs**: Weight, materials, waterproof rating, key features
 - **description**: 1-2 sentence product description from manufacturer
 
-IMAGE URL (important):
-- Get from manufacturer's product page (e.g. arcteryx.com, patagonia.com)
-- For discontinued products, use REI, Backcountry, or Outdoor Gear Lab
-- Use direct image URLs ending in .jpg, .png, .webp
-- Do NOT use Google Images, CDN thumbnails, or search result URLs
+IMAGE URL (CRITICAL - must be actual image file):
+- Must be a DIRECT IMAGE FILE URL ending in .jpg, .png, .webp, or containing /images/
+- Example CORRECT: "https://images.arcteryx.com/F23/450x500/Norvan-LD-3-Shoe.jpg"
+- Example WRONG: "https://arcteryx.com/us/en/shop/mens/norvan-ld-3-shoe" (this is a page, not an image)
+- Find the actual product image by inspecting the page source
+- REI images: "https://www.rei.com/media/product/123456.jpg"
+- Backcountry: "https://content.backcountry.com/images/items/900/ARC/ARC1234/MAIN.jpg"
+- Do NOT return product page URLs - only image file URLs that can be loaded in an <img> tag
 
 REVIEWS (include 2-3 when available):
 - Outdoor Gear Lab (outdoorgearlab.com)
