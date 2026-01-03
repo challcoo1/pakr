@@ -162,27 +162,23 @@ async function fetchFromLLM(query: string, category?: string) {
 
     console.log('LLM search:', query);
 
-    const response = await openai.responses.create({
+    const response = await openai.chat.completions.create({
       model: 'gpt-4o',
-      tools: [{ type: 'web_search' }],
-      input: [
+      messages: [
         { role: 'system', content: GEAR_SEARCH_SKILL },
         { role: 'user', content: prompt }
       ],
     });
 
-    const textOutput = (response.output as any[]).find((o: any) => o.type === 'message');
-    if (textOutput?.content) {
-      const content = textOutput.content.map((c: any) => c.text).join('');
-      const extracted = extractJsonArray(content);
-      if (extracted) {
-        try {
-          const parsed = JSON.parse(extracted);
-          console.log('LLM returned', parsed.length, 'results');
-          return parsed;
-        } catch (parseError) {
-          console.error('JSON parse error:', parseError);
-        }
+    const content = response.choices[0]?.message?.content || '';
+    const extracted = extractJsonArray(content);
+    if (extracted) {
+      try {
+        const parsed = JSON.parse(extracted);
+        console.log('LLM returned', parsed.length, 'results');
+        return parsed;
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError);
       }
     }
 
@@ -211,18 +207,16 @@ Requirements: ${requirement.specs}
 
 Recommend the best ${requirement.item} for this specific trip.`;
 
-    const response = await openai.responses.create({
+    const response = await openai.chat.completions.create({
       model: 'gpt-4o',
-      tools: [{ type: 'web_search' }],
-      input: [
+      messages: [
         { role: 'system', content: GEAR_SEARCH_SKILL },
         { role: 'user', content: prompt }
       ],
     });
 
-    const textOutput = (response.output as any[]).find((o: any) => o.type === 'message');
-    if (textOutput?.content) {
-      const content = textOutput.content.map((c: any) => c.text).join('');
+    const content = response.choices[0]?.message?.content || '';
+    if (content) {
 
       const extracted = extractJsonObject(content);
       if (extracted) {
