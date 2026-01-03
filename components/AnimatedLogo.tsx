@@ -109,7 +109,7 @@ export default function AnimatedLogo({
             return (
               <div
                 key={index}
-                className="bg-charcoal"
+                className="bg-charcoal/80"
                 style={{
                   width: config.barWidth + config.gap,
                   height: showShadow ? shadowHeight : 0,
