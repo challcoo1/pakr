@@ -1,6 +1,56 @@
 // app/api/gear/route.ts
 
 import { NextResponse } from 'next/server';
+import OpenAI from 'openai';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+function loadSkill(): string {
+  try {
+    return readFileSync(join(process.cwd(), 'skills', 'gear-search', 'SKILL.md'), 'utf-8');
+  } catch {
+    return '';
+  }
+}
+
+async function enrichItem(sql: any, id: string, name: string) {
+  console.log('[ENRICH] Starting for:', name, 'ID:', id);
+  try {
+    const skill = loadSkill();
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: skill },
+        { role: 'user', content: `Query: "${name}"\n\nFind this exact product with image and reviews.` }
+      ],
+      temperature: 0.3,
+      response_format: { type: 'json_object' }
+    });
+
+    const content = response.choices[0]?.message?.content || '';
+    const parsed = JSON.parse(content);
+    const item = parsed.results?.[0] || parsed;
+
+    console.log('[ENRICH] Got imageUrl:', item.imageUrl || 'NONE');
+    console.log('[ENRICH] Got reviews:', item.reviews ? 'YES' : 'NONE');
+
+    if (item.imageUrl || item.reviews) {
+      await sql`
+        UPDATE gear_catalog SET
+          image_url = COALESCE(${item.imageUrl || null}, image_url),
+          reviews = COALESCE(${item.reviews ? JSON.stringify(item.reviews) : null}::jsonb, reviews),
+          description = COALESCE(${item.description || null}, description),
+          product_url = COALESCE(${item.productUrl || null}, product_url)
+        WHERE id = ${id}
+      `;
+      console.log('[ENRICH] Updated DB for:', name);
+    }
+  } catch (error) {
+    console.error('[ENRICH] Failed:', name, error);
+  }
+}
 
 // Dynamic imports to avoid module init issues
 async function getDb() {
@@ -139,6 +189,14 @@ export async function POST(request: Request) {
           reviews = COALESCE(${reviews ? JSON.stringify(reviews) : null}::jsonb, reviews)
         WHERE id = ${gearId}
       `;
+      // Check if still incomplete - enrich if missing image or reviews
+      const checkResult = await sql`
+        SELECT image_url, reviews FROM gear_catalog WHERE id = ${gearId}
+      `;
+      if (!checkResult[0]?.image_url || !checkResult[0]?.reviews) {
+        console.log('[GEAR POST] Item incomplete, enriching:', name);
+        await enrichItem(sql, gearId, name);
+      }
     } else {
       const newGear = await sql`
         INSERT INTO gear_catalog (name, manufacturer, category, subcategory, gender, image_url, description, product_url, reviews, specs)
@@ -146,6 +204,11 @@ export async function POST(request: Request) {
         RETURNING id
       `;
       gearId = newGear[0].id;
+      // Enrich new items if no image or reviews provided
+      if (!imageUrl || !reviews) {
+        console.log('[GEAR POST] New item, enriching:', name);
+        await enrichItem(sql, gearId, name);
+      }
     }
 
     // Add to user's gear
