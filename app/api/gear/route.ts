@@ -46,6 +46,9 @@ export async function GET() {
         gc.subcategory as catalog_subcategory,
         gc.gender as catalog_gender,
         gc.image_url,
+        gc.description,
+        gc.product_url,
+        gc.reviews,
         gc.specs
       FROM user_gear ug
       JOIN gear_catalog gc ON ug.gear_id = gc.id
@@ -62,6 +65,9 @@ export async function GET() {
         subcategory: g.user_subcategory || g.catalog_subcategory,
         gender: g.user_gender || g.catalog_gender,
         imageUrl: g.image_url,
+        description: g.description,
+        productUrl: g.product_url,
+        reviews: g.reviews,
         specs: formatSpecs(g.specs),
         notes: g.notes,
         addedAt: g.added_at,
@@ -108,7 +114,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const { name, brand, specs, category, subcategory, gender, notes, imageUrl } = await request.json();
+    const { name, brand, specs, category, subcategory, gender, notes, imageUrl, description, productUrl, reviews } = await request.json();
 
     if (!name || !category) {
       return NextResponse.json({ error: 'Name and category required' }, { status: 400 });
@@ -123,19 +129,20 @@ export async function POST(request: Request) {
     if (gearResult[0]) {
       gearId = gearResult[0].id;
       // Update with new data if we have it
-      if (imageUrl || subcategory || gender) {
-        await sql`
-          UPDATE gear_catalog SET
-            image_url = COALESCE(${imageUrl || null}, image_url),
-            subcategory = COALESCE(${subcategory || null}, subcategory),
-            gender = COALESCE(${gender || null}, gender)
-          WHERE id = ${gearId}
-        `;
-      }
+      await sql`
+        UPDATE gear_catalog SET
+          image_url = COALESCE(${imageUrl || null}, image_url),
+          subcategory = COALESCE(${subcategory || null}, subcategory),
+          gender = COALESCE(${gender || null}, gender),
+          description = COALESCE(${description || null}, description),
+          product_url = COALESCE(${productUrl || null}, product_url),
+          reviews = COALESCE(${reviews ? JSON.stringify(reviews) : null}::jsonb, reviews)
+        WHERE id = ${gearId}
+      `;
     } else {
       const newGear = await sql`
-        INSERT INTO gear_catalog (name, manufacturer, category, subcategory, gender, image_url, specs)
-        VALUES (${name}, ${brand}, ${category}, ${subcategory || null}, ${gender || null}, ${imageUrl || null}, ${JSON.stringify({ raw: specs })})
+        INSERT INTO gear_catalog (name, manufacturer, category, subcategory, gender, image_url, description, product_url, reviews, specs)
+        VALUES (${name}, ${brand}, ${category}, ${subcategory || null}, ${gender || null}, ${imageUrl || null}, ${description || null}, ${productUrl || null}, ${reviews ? JSON.stringify(reviews) : null}::jsonb, ${JSON.stringify({ raw: specs })})
         RETURNING id
       `;
       gearId = newGear[0].id;

@@ -19,6 +19,12 @@ const COUNTRIES = [
 
 const getFlagUrl = (code: string) => `https://flagcdn.com/24x18/${code.toLowerCase()}.png`;
 
+interface Review {
+  source: string;
+  url: string;
+  rating?: string;
+}
+
 interface GearItem {
   id: string;
   name: string;
@@ -27,15 +33,12 @@ interface GearItem {
   subcategory?: string;
   gender?: string;
   imageUrl?: string;
+  description?: string;
+  productUrl?: string;
+  reviews?: Review[];
   specs: string;
   notes?: string;
   addedAt: string;
-}
-
-interface Review {
-  source: string;
-  url: string;
-  rating?: string;
 }
 
 interface ProductMatch {
@@ -85,6 +88,7 @@ export default function GearPage() {
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [userCountry, setUserCountry] = useState<{ code: string; name: string } | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
   // Auto-detect country on mount
   useEffect(() => {
@@ -179,6 +183,9 @@ export default function GearPage() {
           subcategory: addingGear.subcategory,
           gender: selectedGender,
           imageUrl: addingGear.imageUrl,
+          description: addingGear.description,
+          productUrl: addingGear.productUrl,
+          reviews: addingGear.reviews,
           notes: gearNotes,
         }),
       });
@@ -394,34 +401,89 @@ export default function GearPage() {
                       <span className="text-white/60 text-sm ml-2">({items.length})</span>
                     </div>
                     <div className="gear-portfolio-items">
-                      {items.map((item) => (
-                        <div key={item.id} className="gear-portfolio-item">
-                          {item.imageUrl && (
-                            <img
-                              src={item.imageUrl}
-                              alt={item.name}
-                              className="w-16 h-16 object-cover rounded flex-shrink-0"
-                            />
-                          )}
-                          <div className="gear-portfolio-item-main">
-                            <div className="gear-portfolio-item-name">{item.name}</div>
-                            <div className="gear-portfolio-item-specs">{item.specs}</div>
-                            {item.gender && (
-                              <span className="text-xs text-muted">{item.gender}</span>
-                            )}
-                            {item.notes && (
-                              <div className="gear-portfolio-item-notes">{item.notes}</div>
+                      {items.map((item) => {
+                        const isExpanded = expandedItems.has(item.id);
+                        const hasDetails = item.description || (item.reviews && item.reviews.length > 0);
+                        return (
+                          <div key={item.id} className="gear-portfolio-item flex-col items-stretch">
+                            <div className="flex items-start gap-3">
+                              {item.imageUrl && (
+                                <img
+                                  src={item.imageUrl}
+                                  alt={item.name}
+                                  className="w-16 h-16 object-cover rounded flex-shrink-0"
+                                />
+                              )}
+                              <div className="gear-portfolio-item-main flex-1">
+                                <div className="gear-portfolio-item-name">{item.name}</div>
+                                <div className="gear-portfolio-item-specs">{item.specs}</div>
+                                {item.gender && (
+                                  <span className="text-xs text-muted">{item.gender}</span>
+                                )}
+                                {item.notes && (
+                                  <div className="gear-portfolio-item-notes">{item.notes}</div>
+                                )}
+                                {item.productUrl && (
+                                  <a href={item.productUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
+                                    View product
+                                  </a>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => handleDeleteGear(item.id)}
+                                className="gear-portfolio-item-delete"
+                                title="Remove"
+                              >
+                                ×
+                              </button>
+                            </div>
+                            {hasDetails && (
+                              <div className="mt-2 pt-2 border-t border-gray-100">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newSet = new Set(expandedItems);
+                                    if (isExpanded) {
+                                      newSet.delete(item.id);
+                                    } else {
+                                      newSet.add(item.id);
+                                    }
+                                    setExpandedItems(newSet);
+                                  }}
+                                  className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                                >
+                                  {isExpanded ? '▼' : '▶'} Details & Reviews
+                                </button>
+                                {isExpanded && (
+                                  <div className="mt-2 text-sm space-y-2">
+                                    {item.description && (
+                                      <p className="text-gray-600">{item.description}</p>
+                                    )}
+                                    {item.reviews && item.reviews.length > 0 && (
+                                      <div>
+                                        <div className="font-medium text-xs text-gray-500 mb-1">REVIEWS</div>
+                                        <div className="space-y-1">
+                                          {item.reviews.map((review, idx) => (
+                                            <a
+                                              key={idx}
+                                              href={review.url}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="block text-blue-600 hover:underline text-xs"
+                                            >
+                                              {review.source} {review.rating && `(${review.rating})`}
+                                            </a>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             )}
                           </div>
-                          <button
-                            onClick={() => handleDeleteGear(item.id)}
-                            className="gear-portfolio-item-delete"
-                            title="Remove"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 );
