@@ -11,16 +11,18 @@ interface AnimatedLogoProps {
 }
 
 // Mountain range profile - heights as percentages (0-100)
-// Creates multiple peaks like a real mountain range
+// Sharp peaks like a real mountain range silhouette
 const MOUNTAIN_PROFILE = [
-  // Rising to first small peak
-  10, 15, 22, 30, 38, 45, 52, 48, 42,
-  // Valley then rising to main peak
-  35, 30, 35, 45, 55, 68, 78, 88, 95, 100, 95, 85,
-  // Descent with minor peak
-  72, 60, 55, 62, 68, 60, 50,
+  // Base to first peak
+  15, 25, 40, 55, 45,
+  // Valley then sharp rise to main peak
+  30, 20, 35, 55, 75, 95, 100, 90,
+  // Drop to valley
+  65, 45, 35,
+  // Second peak
+  50, 70, 80, 65,
   // Final descent
-  42, 35, 28, 22, 15, 10
+  45, 30, 20, 15
 ];
 
 export default function AnimatedLogo({
@@ -32,25 +34,25 @@ export default function AnimatedLogo({
   const [visibleBars, setVisibleBars] = useState(0);
 
   const sizeConfig = {
-    small: { height: 20, barWidth: 2, gap: 0.5, textSize: 'text-lg' },
-    medium: { height: 32, barWidth: 3, gap: 1, textSize: 'text-2xl' },
-    large: { height: 44, barWidth: 4, gap: 1.5, textSize: 'text-3xl' }
+    small: { height: 18, barWidth: 2, gap: 1, textSize: 'text-lg' },
+    medium: { height: 28, barWidth: 3, gap: 1.5, textSize: 'text-2xl' },
+    large: { height: 40, barWidth: 4, gap: 2, textSize: 'text-3xl' }
   };
 
   const config = sizeConfig[size];
   const totalBars = MOUNTAIN_PROFILE.length;
 
   useEffect(() => {
-    // Animate bars appearing left to right
+    // Animate bars appearing left to right, then loop
     const interval = setInterval(() => {
       setVisibleBars(prev => {
-        if (prev >= totalBars) {
-          clearInterval(interval);
-          return prev;
+        if (prev >= totalBars + 10) {
+          // Reset after a pause at the end
+          return 0;
         }
         return prev + 1;
       });
-    }, 30); // 30ms per bar = ~1s total animation
+    }, 80); // 80ms per bar for slower build
 
     return () => clearInterval(interval);
   }, [totalBars]);
@@ -75,8 +77,7 @@ export default function AnimatedLogo({
               width: config.barWidth,
               height: `${heightPercent}%`,
               transform: index < visibleBars ? 'scaleY(1)' : 'scaleY(0)',
-              transformOrigin: 'bottom',
-              borderRadius: config.barWidth / 2
+              transformOrigin: 'bottom'
             }}
           />
         ))}
