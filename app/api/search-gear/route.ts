@@ -1,4 +1,5 @@
 // app/api/search-gear/route.ts
+// Pattern: DB is source of truth. LLM populates DB, never displays directly.
 
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
@@ -27,37 +28,32 @@ export async function POST(request: Request) {
 
     const searchTerm = query.trim().toLowerCase();
 
-    // DB search only by default
-    if (!online) {
-      const dbResults = await searchDatabase(searchTerm);
-      return NextResponse.json({ results: dbResults });
-    }
-
-    // Recommendation mode: has trip context
+    // Recommendation mode: has trip context (this still uses LLM directly for now)
     if (tripContext && requirement) {
       const recommendation = await getRecommendation(query.trim(), category, tripContext, requirement, userLocation);
       return NextResponse.json({ recommendation });
     }
 
-    // Regular online search - search both and dedupe
-    const [dbResults, onlineResults] = await Promise.all([
-      searchDatabase(searchTerm),
-      searchOnline(query.trim(), category)
-    ]);
+    // Step 1: Always search DB first
+    let dbResults = await searchDatabase(searchTerm);
 
-    console.log('DB results:', dbResults.length, 'Online results:', onlineResults.length);
+    // Step 2: If online mode and insufficient results, populate DB from LLM
+    if (online && dbResults.length < 3) {
+      console.log('DB has', dbResults.length, 'results, fetching from LLM to populate...');
+      const onlineResults = await fetchFromLLM(query.trim(), category);
 
-    // Build seen set from DB names for deduplication
-    const dbNames = new Set(dbResults.map((g: any) => g.name.toLowerCase()));
+      // Save each result to DB
+      for (const item of onlineResults) {
+        await saveToDatabase(item);
+      }
 
-    // Filter to truly new online results
-    const newOnline = onlineResults
-      .filter((g: any) => !dbNames.has(g.name.toLowerCase()));
+      // Step 3: Re-search DB to get consistent results
+      dbResults = await searchDatabase(searchTerm);
+      console.log('After populating, DB has', dbResults.length, 'results');
+    }
 
-    // Combine: DB first, then new online results
-    const results = [...dbResults, ...newOnline];
-
-    return NextResponse.json({ results });
+    // Always return from DB - never return LLM results directly
+    return NextResponse.json({ results: dbResults });
 
   } catch (error) {
     console.error('Search error:', error);
@@ -66,14 +62,12 @@ export async function POST(request: Request) {
 }
 
 async function searchDatabase(searchTerm: string) {
-  // Split search into words
   const words = searchTerm.toLowerCase().split(/\s+/).filter(w => w.length > 1);
 
   if (words.length === 0) {
     return [];
   }
 
-  // Search using first word, then filter by all words
   const firstWord = words[0];
   const dbResults = await sql`
     SELECT id, name, manufacturer, category, subcategory, gender, image_url, description, product_url, reviews, specs
@@ -81,6 +75,9 @@ async function searchDatabase(searchTerm: string) {
     WHERE
       LOWER(name) LIKE ${'%' + firstWord + '%'}
       OR LOWER(manufacturer) LIKE ${'%' + firstWord + '%'}
+    ORDER BY
+      CASE WHEN LOWER(name) LIKE ${searchTerm + '%'} THEN 0 ELSE 1 END,
+      name
     LIMIT 50
   `;
 
@@ -106,13 +103,58 @@ async function searchDatabase(searchTerm: string) {
   }));
 }
 
-async function searchOnline(query: string, category?: string) {
+async function saveToDatabase(item: any) {
+  try {
+    // Check if already exists
+    const existing = await sql`
+      SELECT id FROM gear_catalog WHERE LOWER(name) = ${item.name.toLowerCase()} LIMIT 1
+    `;
+
+    if (existing[0]) {
+      // Update with new data (only if we have better data)
+      await sql`
+        UPDATE gear_catalog SET
+          image_url = COALESCE(NULLIF(${item.imageUrl || null}, ''), image_url),
+          description = COALESCE(NULLIF(${item.description || null}, ''), description),
+          product_url = COALESCE(NULLIF(${item.productUrl || null}, ''), product_url),
+          reviews = COALESCE(${item.reviews ? JSON.stringify(item.reviews) : null}::jsonb, reviews),
+          category = COALESCE(NULLIF(${item.category || null}, ''), category),
+          subcategory = COALESCE(NULLIF(${item.subcategory || null}, ''), subcategory),
+          gender = COALESCE(NULLIF(${item.gender || null}, ''), gender)
+        WHERE id = ${existing[0].id}
+      `;
+      console.log('Updated existing gear:', item.name);
+    } else {
+      // Insert new
+      await sql`
+        INSERT INTO gear_catalog (name, manufacturer, category, subcategory, gender, image_url, description, product_url, reviews, specs)
+        VALUES (
+          ${item.name},
+          ${item.brand || null},
+          ${item.category || null},
+          ${item.subcategory || null},
+          ${item.gender || null},
+          ${item.imageUrl || null},
+          ${item.description || null},
+          ${item.productUrl || null},
+          ${item.reviews ? JSON.stringify(item.reviews) : null}::jsonb,
+          ${JSON.stringify({ raw: item.specs || '' })}
+        )
+      `;
+      console.log('Inserted new gear:', item.name);
+    }
+  } catch (error) {
+    console.error('Failed to save gear to DB:', item.name, error);
+  }
+}
+
+async function fetchFromLLM(query: string, category?: string) {
   try {
     const prompt = category
       ? `Category: "${category}"\nQuery: "${query}"\n\nFind current products available for purchase.`
       : `Query: "${query}"\n\nFind current products available for purchase.`;
 
-    console.log('Online search:', query);
+    console.log('LLM search:', query);
 
     const response = await openai.responses.create({
       model: 'gpt-4o',
@@ -123,35 +165,24 @@ async function searchOnline(query: string, category?: string) {
       ],
     });
 
-    // Extract text from response
     const textOutput = (response.output as any[]).find((o: any) => o.type === 'message');
     if (textOutput?.content) {
       const content = textOutput.content.map((c: any) => c.text).join('');
-      console.log('Online search response length:', content.length);
-
-      // Extract balanced JSON array using bracket counting
       const extracted = extractJsonArray(content);
       if (extracted) {
         try {
           const parsed = JSON.parse(extracted);
-          console.log('Online search parsed:', parsed.length, 'results');
-          return parsed.map((item: any) => ({
-            ...item,
-            source: 'online'
-          }));
+          console.log('LLM returned', parsed.length, 'results');
+          return parsed;
         } catch (parseError) {
-          console.error('JSON parse error:', parseError, 'Content:', extracted.slice(0, 200));
+          console.error('JSON parse error:', parseError);
         }
-      } else {
-        console.log('No JSON array found in response');
       }
-    } else {
-      console.log('No text output in response');
     }
 
     return [];
   } catch (error) {
-    console.error('Online search error:', error);
+    console.error('LLM fetch error:', error);
     return [];
   }
 }
@@ -174,8 +205,6 @@ Requirements: ${requirement.specs}
 
 Recommend the best ${requirement.item} for this specific trip.`;
 
-    console.log('Getting recommendation for:', requirement.item);
-
     const response = await openai.responses.create({
       model: 'gpt-4o',
       tools: [{ type: 'web_search' }],
@@ -188,14 +217,11 @@ Recommend the best ${requirement.item} for this specific trip.`;
     const textOutput = (response.output as any[]).find((o: any) => o.type === 'message');
     if (textOutput?.content) {
       const content = textOutput.content.map((c: any) => c.text).join('');
-      console.log('Recommendation response length:', content.length);
 
-      // Try to extract JSON object (recommendation format)
       const extracted = extractJsonObject(content);
       if (extracted) {
         try {
           const parsed = JSON.parse(extracted);
-          console.log('Recommendation parsed:', parsed.topPick?.name);
           return {
             topPick: parsed.topPick ? {
               name: parsed.topPick.name,
@@ -215,7 +241,6 @@ Recommend the best ${requirement.item} for this specific trip.`;
         }
       }
 
-      // Fallback: try to extract as array and convert
       const arrayExtracted = extractJsonArray(content);
       if (arrayExtracted) {
         try {
@@ -249,7 +274,6 @@ Recommend the best ${requirement.item} for this specific trip.`;
   }
 }
 
-// Extract balanced JSON object from text
 function extractJsonObject(text: string): string | null {
   const startIdx = text.indexOf('{');
   if (startIdx === -1) return null;
@@ -289,7 +313,6 @@ function extractJsonObject(text: string): string | null {
   return null;
 }
 
-// Extract balanced JSON array from text (handles nested brackets)
 function extractJsonArray(text: string): string | null {
   const startIdx = text.indexOf('[');
   if (startIdx === -1) return null;
@@ -331,6 +354,8 @@ function extractJsonArray(text: string): string | null {
 
 function formatSpecs(specs: any): string {
   if (!specs) return '';
+  if (typeof specs === 'string') return specs;
+  if (specs.raw) return specs.raw;
 
   const parts = [];
   if (specs.weight?.value) parts.push(`${specs.weight.value}${specs.weight.unit}`);

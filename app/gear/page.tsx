@@ -89,6 +89,8 @@ export default function GearPage() {
   const [userCountry, setUserCountry] = useState<{ code: string; name: string } | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
+  const [brokenUrls, setBrokenUrls] = useState<Set<string>>(new Set());
 
   // Auto-detect country on mount
   useEffect(() => {
@@ -407,11 +409,12 @@ export default function GearPage() {
                         return (
                           <div key={item.id} className="gear-portfolio-item flex-col items-stretch">
                             <div className="flex items-start gap-3">
-                              {item.imageUrl && (
+                              {item.imageUrl && !brokenImages.has(item.id) && (
                                 <img
                                   src={item.imageUrl}
                                   alt={item.name}
                                   className="w-16 h-16 object-cover rounded flex-shrink-0"
+                                  onError={() => setBrokenImages(prev => new Set(prev).add(item.id))}
                                 />
                               )}
                               <div className="gear-portfolio-item-main flex-1">
@@ -551,8 +554,13 @@ export default function GearPage() {
                           onClick={() => handleSelectGear(product)}
                           className="gear-box-dropdown-item flex items-center gap-3"
                         >
-                          {product.imageUrl && (
-                            <img src={product.imageUrl} alt="" className="w-12 h-12 object-cover rounded flex-shrink-0" />
+                          {product.imageUrl && !brokenUrls.has(product.imageUrl) && (
+                            <img
+                              src={product.imageUrl}
+                              alt=""
+                              className="w-12 h-12 object-cover rounded flex-shrink-0"
+                              onError={() => setBrokenUrls(prev => new Set(prev).add(product.imageUrl!))}
+                            />
                           )}
                           <div className="flex-1 text-left">
                             <div className="font-medium">{product.name}</div>
@@ -571,8 +579,13 @@ export default function GearPage() {
                   {/* Selected gear details */}
                   <div className="mb-4 p-3 bg-gray-50 rounded">
                     <div className="flex items-center gap-3">
-                      {addingGear.imageUrl && (
-                        <img src={addingGear.imageUrl} alt="" className="w-16 h-16 object-cover rounded flex-shrink-0" />
+                      {addingGear.imageUrl && !brokenUrls.has(addingGear.imageUrl) && (
+                        <img
+                          src={addingGear.imageUrl}
+                          alt=""
+                          className="w-16 h-16 object-cover rounded flex-shrink-0"
+                          onError={() => setBrokenUrls(prev => new Set(prev).add(addingGear.imageUrl!))}
+                        />
                       )}
                       <div className="flex-1">
                         <div className="font-medium">{addingGear.name}</div>
