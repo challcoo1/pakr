@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import Link from 'next/link';
+import AnimatedLogo from '@/components/AnimatedLogo';
 
 interface TripGear {
   id: string;
@@ -103,7 +104,7 @@ export default function TripsPage() {
       <>
         <div className="red-band">
           <div className="red-band-container">
-            <Link href="/" className="logo-light">pakr</Link>
+            <AnimatedLogo variant="light" size="small" />
           </div>
         </div>
         <div className="main-content">
@@ -121,7 +122,7 @@ export default function TripsPage() {
     <>
       <div className="red-band">
         <div className="red-band-container">
-          <Link href="/" className="logo-light">pakr</Link>
+          <AnimatedLogo variant="light" size="small" />
           <div className="flex items-center gap-4">
             <Link href="/gear" className="text-white/80 hover:text-white text-sm">My Gear</Link>
           </div>

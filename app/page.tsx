@@ -2,6 +2,7 @@
 
 import { useState, useEffect, FormEvent } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
+import AnimatedLogo from '@/components/AnimatedLogo';
 
 interface GearRequirement {
   item: string;
@@ -690,7 +691,7 @@ export default function Home() {
       {/* Red Band - Full width stripe at top */}
       <div className="red-band">
         <div className="red-band-container">
-          <span className="logo-light">pakr</span>
+          <AnimatedLogo variant="light" size="small" />
           <div className="flex items-center gap-4">
             {/* Country selector */}
             <div className="relative">

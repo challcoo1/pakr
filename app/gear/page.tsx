@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import Link from 'next/link';
+import AnimatedLogo from '@/components/AnimatedLogo';
 
 const COUNTRIES = [
   { code: 'AU', name: 'Australia' },
@@ -232,7 +233,7 @@ export default function GearPage() {
       <>
         <div className="red-band">
           <div className="red-band-container">
-            <Link href="/" className="logo-light">pakr</Link>
+            <AnimatedLogo variant="light" size="small" />
             <div className="flex items-center gap-4">
               <button
                 type="button"
@@ -264,7 +265,7 @@ export default function GearPage() {
     <>
       <div className="red-band">
         <div className="red-band-container">
-          <Link href="/" className="logo-light">pakr</Link>
+          <AnimatedLogo variant="light" size="small" />
           <div className="flex items-center gap-4">
             {/* Country selector */}
             <div className="relative">
