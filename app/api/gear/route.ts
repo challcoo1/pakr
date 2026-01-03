@@ -75,9 +75,19 @@ export async function POST(request: Request) {
       const auth = await getAuth();
       const session = await auth();
       if (session?.user?.email) {
-        const userResult = await sql`
+        let userResult = await sql`
           SELECT id FROM users WHERE email = ${session.user.email}
         `;
+
+        // Auto-create user if they don't exist
+        if (!userResult[0]) {
+          userResult = await sql`
+            INSERT INTO users (email, name, image, created_at)
+            VALUES (${session.user.email}, ${session.user.name || 'User'}, ${session.user.image || null}, NOW())
+            RETURNING id
+          `;
+        }
+
         if (userResult[0]) {
           userId = userResult[0].id;
         }
