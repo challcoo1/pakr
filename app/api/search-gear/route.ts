@@ -37,19 +37,25 @@ export async function POST(request: Request) {
     // Step 1: Always search DB first
     let dbResults = await searchDatabase(searchTerm);
 
-    // Step 2: If online mode and insufficient results, populate DB from LLM
-    if (online && dbResults.length < 3) {
-      console.log('DB has', dbResults.length, 'results, fetching from LLM to populate...');
-      const onlineResults = await fetchFromLLM(query.trim(), category);
+    // Step 2: If online mode, check if we need to populate/enrich
+    if (online) {
+      // Check if results are missing key data (image or reviews)
+      const needsEnrichment = dbResults.length < 3 ||
+        dbResults.some((r: any) => !r.imageUrl || !r.reviews);
 
-      // Save each result to DB
-      for (const item of onlineResults) {
-        await saveToDatabase(item);
+      if (needsEnrichment) {
+        console.log('DB has', dbResults.length, 'results, enriching from LLM...');
+        const onlineResults = await fetchFromLLM(query.trim(), category);
+
+        // Save each result to DB (will update existing items with missing data)
+        for (const item of onlineResults) {
+          await saveToDatabase(item);
+        }
+
+        // Step 3: Re-search DB to get updated results
+        dbResults = await searchDatabase(searchTerm);
+        console.log('After enriching, DB has', dbResults.length, 'results');
       }
-
-      // Step 3: Re-search DB to get consistent results
-      dbResults = await searchDatabase(searchTerm);
-      console.log('After populating, DB has', dbResults.length, 'results');
     }
 
     // Always return from DB - never return LLM results directly
