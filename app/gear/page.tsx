@@ -267,6 +267,16 @@ export default function GearPage() {
         <div className="red-band-container">
           <AnimatedLogo variant="light" size="small" />
           <div className="flex items-center gap-4">
+            {/* Nav links */}
+            <div className="flex items-center gap-3">
+              <Link href="/gear" className="text-white text-sm font-medium">
+                My Gear
+              </Link>
+              <Link href="/trips" className="text-white/80 hover:text-white text-sm font-medium transition-colors">
+                My Trips
+              </Link>
+            </div>
+
             {/* Country selector */}
             <div className="relative">
               <button

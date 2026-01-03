@@ -124,7 +124,15 @@ export default function TripsPage() {
         <div className="red-band-container">
           <AnimatedLogo variant="light" size="small" />
           <div className="flex items-center gap-4">
-            <Link href="/gear" className="text-white/80 hover:text-white text-sm">My Gear</Link>
+            {/* Nav links */}
+            <div className="flex items-center gap-3">
+              <Link href="/gear" className="text-white/80 hover:text-white text-sm font-medium transition-colors">
+                My Gear
+              </Link>
+              <Link href="/trips" className="text-white text-sm font-medium">
+                My Trips
+              </Link>
+            </div>
           </div>
         </div>
       </div>
