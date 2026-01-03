@@ -36,49 +36,29 @@ export default function AnimatedLogo({
   const config = sizeConfig[size];
 
   useEffect(() => {
-    // Animate all bars rising together
+    // Small delay then rise
     const timer = setTimeout(() => setRisen(true), 100);
     return () => clearTimeout(timer);
   }, []);
 
   const logo = (
-    <div className="inline-flex items-center gap-2">
-      {/* Mountain bars with shadow */}
-      <div
-        className="flex items-end relative"
-        style={{
-          height: config.height,
-          gap: config.gap
-        }}
-      >
-        {MOUNTAIN_PROFILE.map((heightPercent, index) => (
-          <div key={index} className="relative" style={{ width: config.barWidth }}>
-            {/* Shadow bar - offset right */}
+    <div className="inline-flex items-center gap-3">
+      {/* Mountain bars */}
+      <div className="flex items-end" style={{ height: config.height, gap: config.gap }}>
+        {MOUNTAIN_PROFILE.map((heightPercent, index) => {
+          const barHeight = (heightPercent / 100) * config.height * 0.66;
+          return (
             <div
-              className="absolute bg-charcoal/40"
-              style={{
-                width: config.barWidth,
-                height: `${heightPercent * 0.66}%`,
-                bottom: 0,
-                left: config.barWidth / 2,
-                transform: risen ? 'scaleY(1)' : 'scaleY(0)',
-                transformOrigin: 'bottom',
-                transition: 'transform 1.2s ease-out'
-              }}
-            />
-            {/* Main bar */}
-            <div
+              key={index}
               className={variant === 'light' ? 'bg-white' : 'bg-charcoal'}
               style={{
                 width: config.barWidth,
-                height: `${heightPercent * 0.66}%`,
-                transform: risen ? 'scaleY(1)' : 'scaleY(0)',
-                transformOrigin: 'bottom',
-                transition: 'transform 1.2s ease-out'
+                height: risen ? barHeight : 0,
+                transition: 'height 1.2s ease-out'
               }}
             />
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Text */}
