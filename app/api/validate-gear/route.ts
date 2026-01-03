@@ -42,9 +42,12 @@ export async function POST(request: Request) {
 
     const prompt = `${contextParts.join('\n')}
 
+REQUIREMENT: ${requirement.item}
+SPECS NEEDED: ${requirement.specs || 'standard'}
+
 USER HAS: "${userGear}"
 
-Can they do ${tripContext?.name || 'this trip'} in ${userGear}? Answer like a friend asking.`;
+Consider what "${userGear}" is designed for. Is it suitable for the ${requirement.item} requirement on this trip?`;
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
