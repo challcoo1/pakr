@@ -42,7 +42,11 @@ IMPORTANT:
 - "Arc'teryx Beta AR Jacket XXL Teal - $599" is WRONG
 
 ENRICHMENT PRIORITY:
-- **imageUrl**: Get the product image URL from manufacturer's website when available
+- **imageUrl**: Get a product image URL. Try in order:
+  1. Manufacturer's website
+  2. REI or Backcountry product page
+  3. Review site (Outdoor Gear Lab, Switchback Travel)
+  For discontinued products, use retailer or review site images.
 - **description**: Get the manufacturer's product description (1-2 sentences)
 - **reviews**: Find 2-3 reviews from trusted outdoor gear sites when available:
   * Outdoor Gear Lab, Switchback Travel, REI, GearJunkie, Backcountry, CleverHiker
