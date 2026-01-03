@@ -50,12 +50,30 @@ export async function POST(request: Request) {
         const onlineResults = await fetchFromLLM(query.trim(), category);
 
         // Save each result to DB (will update existing items with missing data)
+        const savedNames: string[] = [];
         for (const item of onlineResults) {
           await saveToDatabase(item);
+          if (item.name) savedNames.push(item.name.toLowerCase());
         }
 
-        // Step 3: Re-search DB to get updated results
+        // Step 3: Re-search DB - use saved names if original search fails
         dbResults = await searchDatabase(searchTerm);
+
+        // If still no results, search by the names we just saved
+        if (dbResults.length === 0 && savedNames.length > 0) {
+          console.log('Original search found nothing, searching by saved names...');
+          for (const savedName of savedNames.slice(0, 3)) {
+            const nameResults = await searchDatabase(savedName.split(' ').slice(0, 2).join(' '));
+            dbResults = [...dbResults, ...nameResults];
+          }
+          // Dedupe by id
+          const seen = new Set();
+          dbResults = dbResults.filter((r: any) => {
+            if (seen.has(r.id)) return false;
+            seen.add(r.id);
+            return true;
+          });
+        }
         console.log('After enriching, DB has', dbResults.length, 'results');
       }
     }
