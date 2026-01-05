@@ -79,10 +79,21 @@ interface GearSearchState {
   showResults: boolean;
 }
 
+// Activity types for trip planning
+const ACTIVITY_TYPES = [
+  { value: 'hiking', label: 'Hiking / Tramping' },
+  { value: 'mountaineering', label: 'Mountaineering' },
+  { value: 'ski-touring', label: 'Ski Touring' },
+  { value: 'ski-mountaineering', label: 'Ski Mountaineering' },
+  { value: 'climbing', label: 'Rock Climbing' },
+  { value: 'snowshoeing', label: 'Snowshoeing' },
+] as const;
+
 // Confirmation step fields
 interface TripConfirm {
   place: string;
   timeOfYear: string;
+  activity: string;
   duration: string;
 }
 
@@ -246,6 +257,7 @@ export default function Home() {
       setTripConfirm({
         place: match?.name || objective.trim(),
         timeOfYear: timeOfYear,
+        activity: 'hiking',
         duration: match?.duration || '',
       });
       setSelectedTrip(match || null);
@@ -265,6 +277,7 @@ export default function Home() {
     setTripConfirm({
       place: tripMatch.name,
       timeOfYear: timeOfYear,
+      activity: 'hiking',
       duration: tripMatch.duration,
     });
     setSelectedTrip(tripMatch);
@@ -314,7 +327,8 @@ export default function Home() {
 
     try {
       // Build full objective from confirmed fields
-      let fullObjective = tripConfirm.place;
+      const activityLabel = ACTIVITY_TYPES.find(t => t.value === tripConfirm.activity)?.label || tripConfirm.activity;
+      let fullObjective = `${activityLabel}: ${tripConfirm.place}`;
       if (tripConfirm.timeOfYear) fullObjective += ` in ${tripConfirm.timeOfYear}`;
       if (tripConfirm.duration && !tripConfirm.duration.includes('missing')) {
         fullObjective += `, ${tripConfirm.duration}`;
@@ -933,6 +947,22 @@ export default function Home() {
                 {!tripConfirm.duration && (
                   <div className="text-xs text-burnt mt-1">Missing</div>
                 )}
+              </div>
+
+              {/* Activity Type */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Activity</label>
+                <select
+                  value={tripConfirm.activity}
+                  onChange={(e) => setTripConfirm({ ...tripConfirm, activity: e.target.value })}
+                  className="input-small w-full"
+                >
+                  {ACTIVITY_TYPES.map((type) => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Selected trip details */}
