@@ -170,6 +170,12 @@ export default function Home() {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [plannedDate, setPlannedDate] = useState('');
 
+  // Gear editing
+  const [excludedGear, setExcludedGear] = useState<Set<string>>(new Set());
+  const [inventoryGear, setInventoryGear] = useState<{ id: string; name: string; category: string }[]>([]);
+  const [showInventoryPicker, setShowInventoryPicker] = useState(false);
+  const [userInventory, setUserInventory] = useState<{ id: string; name: string; category: string }[]>([]);
+
   // Load settings from localStorage on mount
   useEffect(() => {
     const savedSpecs = localStorage.getItem('pakr-specs-mode');
@@ -350,6 +356,8 @@ export default function Home() {
 
       if (analyzeData.trip) {
         setTrip(analyzeData.trip);
+        setExcludedGear(new Set());
+        setInventoryGear([]);
 
         const initial: Record<string, UserGearEntry> = {};
         analyzeData.trip.gear.forEach((g: GearRequirement) => {
@@ -405,14 +413,32 @@ export default function Home() {
     }
   };
 
+  // Load user's gear inventory
+  const loadUserInventory = async () => {
+    if (!session?.user) return;
+    try {
+      const res = await fetch('/api/gear');
+      const data = await res.json();
+      setUserInventory(data.gear?.map((g: { id: string; name: string; category?: string }) => ({
+        id: g.id,
+        name: g.name,
+        category: g.category || 'Other'
+      })) || []);
+    } catch (error) {
+      console.error('Failed to load inventory:', error);
+    }
+  };
+
   // Save trip setup
   const handleSaveTrip = async () => {
     if (!trip || !session) return;
 
     setIsSavingTrip(true);
     try {
-      // Collect gear entries
-      const gearList = trip.gear.map(g => {
+      // Collect gear entries (excluding removed items)
+      const gearList = trip.gear
+        .filter(g => !excludedGear.has(g.item))
+        .map(g => {
         const entry = userGear[g.item];
         return {
           name: entry?.input || g.item,
@@ -422,8 +448,18 @@ export default function Home() {
         };
       }).filter(g => g.isOwned || g.isRecommended);
 
-      // Find missing gear (empty entries)
+      // Add inventory gear items
+      const inventoryGearList = inventoryGear.map(g => ({
+        name: g.name,
+        category: g.category,
+        isOwned: true,
+        isRecommended: false,
+        userGearId: g.id,
+      }));
+
+      // Find missing gear (empty entries, excluding removed items)
       const missingGear = trip.gear
+        .filter(g => !excludedGear.has(g.item))
         .filter(g => !userGear[g.item]?.input || userGear[g.item]?.status === 'empty')
         .map(g => g.item);
 
@@ -440,7 +476,7 @@ export default function Home() {
             grading: trip.grading,
             hazards: trip.hazards,
           },
-          gear: gearList,
+          gear: [...gearList, ...inventoryGearList],
           missingGear: missingGear.length > 0 ? missingGear : null,
           plannedDate: plannedDate || null,
         }),
@@ -1023,7 +1059,7 @@ export default function Home() {
 
             {/* Gear Requirements */}
             <div className="gear-boxes">
-              {trip.gear.map((g) => {
+              {trip.gear.filter(g => !excludedGear.has(g.item)).map((g) => {
                 const entry = userGear[g.item] || { input: '', status: 'empty', reasons: [] };
                 const search = gearSearch[g.item] || { isSearching: false, isSearchingOnline: false, results: [], recommendation: null, showResults: false };
                 const status = getStatusIndicator(entry.status);
@@ -1034,6 +1070,13 @@ export default function Home() {
                     <div className="gear-box-header">
                       <span className="gear-box-bullet">●</span>
                       <span className="gear-box-title">{g.item.toUpperCase()}</span>
+                      <button
+                        onClick={() => setExcludedGear(prev => new Set([...prev, g.item]))}
+                        className="gear-box-remove"
+                        title="Remove from trip"
+                      >
+                        ×
+                      </button>
                     </div>
                     <div className="gear-box-specs">{g.specs}</div>
 
@@ -1205,9 +1248,64 @@ export default function Home() {
                   </div>
                 );
               })}
+
+              {/* Added inventory gear */}
+              {inventoryGear.map(g => (
+                <div key={g.id} className="gear-box gear-box-added">
+                  <div className="gear-box-header">
+                    <span className="gear-box-bullet" style={{ color: '#059669' }}>●</span>
+                    <span className="gear-box-title">{g.name.toUpperCase()}</span>
+                    <button
+                      onClick={() => setInventoryGear(prev => prev.filter(item => item.id !== g.id))}
+                      className="gear-box-remove"
+                      title="Remove from trip"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div className="gear-box-specs">{g.category} • From your gear</div>
+                </div>
+              ))}
             </div>
 
-            {/* Save Trip Button */}
+            {/* Add from My Gear */}
+            {session && (
+              <div className="mt-4">
+                <button
+                  onClick={() => {
+                    loadUserInventory();
+                    setShowInventoryPicker(true);
+                  }}
+                  className="text-sm text-red-700 hover:text-red-800 font-medium"
+                >
+                  + Add from My Gear
+                </button>
+              </div>
+            )}
+
+            {/* Excluded items */}
+            {excludedGear.size > 0 && (
+              <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                <div className="text-xs text-muted mb-2">Removed items (click to restore):</div>
+                <div className="flex flex-wrap gap-2">
+                  {[...excludedGear].map(item => (
+                    <button
+                      key={item}
+                      onClick={() => setExcludedGear(prev => {
+                        const next = new Set(prev);
+                        next.delete(item);
+                        return next;
+                      })}
+                      className="text-xs px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded"
+                    >
+                      {item} +
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Add Trip Button */}
             <div className="mt-6 flex justify-center">
               <button
                 onClick={() => {
@@ -1219,7 +1317,7 @@ export default function Home() {
                 }}
                 className="btn-primary px-8"
               >
-                Save Trip Setup
+                Add Trip
               </button>
             </div>
           </>
@@ -1313,19 +1411,20 @@ export default function Home() {
         </div>
       )}
 
-      {/* Save Trip Modal */}
+      {/* Add Trip Modal */}
       {showSaveModal && trip && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowSaveModal(false)}>
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
-            <h2 className="text-lg font-bold mb-2">Save Trip Setup</h2>
+            <h2 className="text-lg font-bold mb-2">Add Trip</h2>
             <p className="text-sm text-muted mb-4">{trip.name}</p>
 
             {/* Missing gear warning */}
-            {trip.gear.some(g => !userGear[g.item]?.input || userGear[g.item]?.status === 'empty') && (
+            {trip.gear.filter(g => !excludedGear.has(g.item)).some(g => !userGear[g.item]?.input || userGear[g.item]?.status === 'empty') && (
               <div className="bg-orange-50 border border-orange-200 rounded p-3 mb-4">
                 <div className="text-sm font-medium text-orange-800 mb-1">Missing gear:</div>
                 <div className="text-xs text-orange-700">
                   {trip.gear
+                    .filter(g => !excludedGear.has(g.item))
                     .filter(g => !userGear[g.item]?.input || userGear[g.item]?.status === 'empty')
                     .map(g => g.item)
                     .join(', ')}
@@ -1356,7 +1455,49 @@ export default function Home() {
                 disabled={isSavingTrip}
                 className="flex-1 px-4 py-2 bg-red-700 text-white rounded hover:bg-red-800 disabled:opacity-50"
               >
-                {isSavingTrip ? 'Saving...' : 'Save Trip'}
+                {isSavingTrip ? 'Adding...' : 'Add Trip'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inventory Picker Modal */}
+      {showInventoryPicker && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowInventoryPicker(false)}>
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <h2 className="text-lg font-bold mb-4">Add from My Gear</h2>
+
+            {userInventory.length === 0 ? (
+              <p className="text-muted text-sm">No gear in your inventory yet.</p>
+            ) : (
+              <div className="overflow-y-auto flex-1 -mx-2 px-2">
+                <div className="space-y-2">
+                  {userInventory
+                    .filter(g => !inventoryGear.some(added => added.id === g.id))
+                    .map(g => (
+                      <button
+                        key={g.id}
+                        onClick={() => {
+                          setInventoryGear(prev => [...prev, g]);
+                          setShowInventoryPicker(false);
+                        }}
+                        className="w-full text-left p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="font-medium">{g.name}</div>
+                        <div className="text-xs text-muted">{g.category}</div>
+                      </button>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            <div className="mt-4 pt-4 border-t">
+              <button
+                onClick={() => setShowInventoryPicker(false)}
+                className="w-full px-4 py-2 border rounded hover:bg-gray-50"
+              >
+                Close
               </button>
             </div>
           </div>

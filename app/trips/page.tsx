@@ -11,6 +11,15 @@ interface TripGear {
   category: string;
   isOwned: boolean;
   isRecommended: boolean;
+  wasUsed?: boolean;
+  wouldBringAgain?: boolean;
+  usageNotes?: string;
+}
+
+interface GearUsageUpdate {
+  id: string;
+  wasUsed: boolean;
+  wouldBringAgain: boolean | null;
 }
 
 interface Trip {
@@ -29,6 +38,10 @@ interface Trip {
   missingGear?: string[];
   gear: TripGear[];
   createdAt: string;
+  // Completion fields
+  completionStatus?: 'full' | 'partial' | 'bailed';
+  trailRating?: number;
+  trailReview?: string;
 }
 
 export default function TripsPage() {
@@ -39,6 +52,11 @@ export default function TripsPage() {
   const [completedDate, setCompletedDate] = useState('');
   const [actualDuration, setActualDuration] = useState('');
   const [tripNotes, setTripNotes] = useState('');
+  // New completion fields
+  const [completionStatus, setCompletionStatus] = useState<'full' | 'partial' | 'bailed'>('full');
+  const [trailRating, setTrailRating] = useState(0);
+  const [trailReview, setTrailReview] = useState('');
+  const [gearUsage, setGearUsage] = useState<Record<string, GearUsageUpdate>>({});
 
   useEffect(() => {
     if (session?.user) {
@@ -60,6 +78,20 @@ export default function TripsPage() {
     }
   };
 
+  const openCompleteModal = (trip: Trip) => {
+    setCompleteModal(trip);
+    setCompletedDate(new Date().toISOString().split('T')[0]);
+    setCompletionStatus('full');
+    setTrailRating(0);
+    setTrailReview('');
+    // Initialize gear usage - all used by default
+    const initialGearUsage: Record<string, GearUsageUpdate> = {};
+    trip.gear?.forEach(g => {
+      initialGearUsage[g.id] = { id: g.id, wasUsed: true, wouldBringAgain: null };
+    });
+    setGearUsage(initialGearUsage);
+  };
+
   const handleComplete = async () => {
     if (!completeModal) return;
 
@@ -73,6 +105,10 @@ export default function TripsPage() {
           completedDate: completedDate || new Date().toISOString().split('T')[0],
           actualDuration,
           notes: tripNotes,
+          completionStatus,
+          trailRating: trailRating > 0 ? trailRating : null,
+          trailReview: trailReview || null,
+          gearUpdates: Object.values(gearUsage),
         }),
       });
       await loadTrips();
@@ -80,6 +116,10 @@ export default function TripsPage() {
       setCompletedDate('');
       setActualDuration('');
       setTripNotes('');
+      setCompletionStatus('full');
+      setTrailRating(0);
+      setTrailReview('');
+      setGearUsage({});
     } catch (error) {
       console.error('Failed to complete trip:', error);
     }
@@ -172,10 +212,7 @@ export default function TripsPage() {
                       </div>
                       <div className="flex gap-2">
                         <button
-                          onClick={() => {
-                            setCompleteModal(trip);
-                            setCompletedDate(new Date().toISOString().split('T')[0]);
-                          }}
+                          onClick={() => openCompleteModal(trip)}
                           className="text-xs px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
                         >
                           Mark Complete
@@ -237,15 +274,39 @@ export default function TripsPage() {
                         <h3 className="font-semibold text-charcoal">{trip.name}</h3>
                         {trip.region && <p className="text-sm text-muted">{trip.region}</p>}
                       </div>
-                      <div className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
-                        Completed {trip.completedDate}
+                      <div className="flex items-center gap-2">
+                        {trip.completionStatus && trip.completionStatus !== 'full' && (
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            trip.completionStatus === 'partial' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                          }`}>
+                            {trip.completionStatus === 'partial' ? 'Partial' : 'Bailed'}
+                          </span>
+                        )}
+                        <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
+                          {trip.completedDate}
+                        </span>
                       </div>
                     </div>
+
+                    {/* Trail Rating */}
+                    {trip.trailRating && trip.trailRating > 0 && (
+                      <div className="flex items-center gap-1 mb-2">
+                        {[1, 2, 3, 4, 5].map(star => (
+                          <span key={star} className="text-sm">
+                            {star <= trip.trailRating! ? '★' : '☆'}
+                          </span>
+                        ))}
+                      </div>
+                    )}
 
                     <div className="flex flex-wrap gap-2 text-xs text-muted mb-2">
                       {trip.actualDuration && <span className="bg-gray-200 px-2 py-1 rounded">{trip.actualDuration}</span>}
                       {trip.terrain && <span className="bg-gray-200 px-2 py-1 rounded">{trip.terrain}</span>}
                     </div>
+
+                    {trip.trailReview && (
+                      <p className="text-sm text-charcoal mb-2">{trip.trailReview}</p>
+                    )}
 
                     {trip.notes && (
                       <p className="text-sm text-muted italic">{trip.notes}</p>
@@ -253,7 +314,14 @@ export default function TripsPage() {
 
                     {trip.gear && trip.gear.length > 0 && (
                       <div className="border-t border-gray-200 pt-2 mt-2">
-                        <div className="text-xs text-muted">Used {trip.gear.length} items</div>
+                        <div className="text-xs text-muted">
+                          {trip.gear.filter(g => g.wasUsed !== false).length} of {trip.gear.length} items used
+                          {trip.gear.some(g => g.wouldBringAgain === false) && (
+                            <span className="text-orange-600 ml-2">
+                              • {trip.gear.filter(g => g.wouldBringAgain === false).length} wouldn&apos;t bring again
+                            </span>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -266,40 +334,152 @@ export default function TripsPage() {
 
       {/* Complete Trip Modal */}
       {completeModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setCompleteModal(null)}>
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
-            <h2 className="text-lg font-bold mb-4">Complete Trip</h2>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setCompleteModal(null)}>
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <h2 className="text-lg font-bold mb-1">Complete Trip</h2>
             <p className="text-sm text-muted mb-4">{completeModal.name}</p>
 
-            <div className="space-y-4">
+            <div className="space-y-5">
+              {/* Basic Info Row */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Completion Date</label>
+                  <input
+                    type="date"
+                    value={completedDate}
+                    onChange={e => setCompletedDate(e.target.value)}
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Actual Duration</label>
+                  <input
+                    type="text"
+                    value={actualDuration}
+                    onChange={e => setActualDuration(e.target.value)}
+                    placeholder="e.g. 5 days, 3 hours"
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+              </div>
+
+              {/* Completion Status */}
               <div>
-                <label className="block text-sm font-medium mb-1">Completion Date</label>
-                <input
-                  type="date"
-                  value={completedDate}
-                  onChange={e => setCompletedDate(e.target.value)}
-                  className="w-full border rounded px-3 py-2"
+                <label className="block text-sm font-medium mb-1">How did it go?</label>
+                <div className="flex gap-2">
+                  {[
+                    { value: 'full', label: 'Completed fully', color: 'green' },
+                    { value: 'partial', label: 'Partial completion', color: 'yellow' },
+                    { value: 'bailed', label: 'Bailed / turned back', color: 'red' },
+                  ].map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setCompletionStatus(opt.value as 'full' | 'partial' | 'bailed')}
+                      className={`flex-1 px-3 py-2 text-sm rounded border transition-colors ${
+                        completionStatus === opt.value
+                          ? opt.color === 'green' ? 'bg-green-100 border-green-500 text-green-700'
+                          : opt.color === 'yellow' ? 'bg-yellow-100 border-yellow-500 text-yellow-700'
+                          : 'bg-red-100 border-red-500 text-red-700'
+                          : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Trail Rating */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Rate this trail</label>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <button
+                      key={star}
+                      onClick={() => setTrailRating(star)}
+                      className="text-2xl transition-colors"
+                    >
+                      {star <= trailRating ? '★' : '☆'}
+                    </button>
+                  ))}
+                  {trailRating > 0 && (
+                    <span className="text-sm text-muted ml-2 self-center">
+                      {trailRating === 5 ? 'Amazing!' : trailRating === 4 ? 'Great' : trailRating === 3 ? 'Good' : trailRating === 2 ? 'Fair' : 'Poor'}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Trail Review */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Trail Review (optional)</label>
+                <textarea
+                  value={trailReview}
+                  onChange={e => setTrailReview(e.target.value)}
+                  placeholder="How was the trail? Conditions, highlights, tips for others..."
+                  className="w-full border rounded px-3 py-2 h-20"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-1">Actual Duration</label>
-                <input
-                  type="text"
-                  value={actualDuration}
-                  onChange={e => setActualDuration(e.target.value)}
-                  placeholder="e.g. 5 days, 3 hours"
-                  className="w-full border rounded px-3 py-2"
-                />
-              </div>
+              {/* Gear Usage Checklist */}
+              {completeModal.gear && completeModal.gear.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium mb-2">Gear Used</label>
+                  <div className="border rounded-lg divide-y max-h-64 overflow-y-auto">
+                    {completeModal.gear.map(g => {
+                      const usage = gearUsage[g.id] || { id: g.id, wasUsed: true, wouldBringAgain: null };
+                      return (
+                        <div key={g.id} className="p-3 flex items-center justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium truncate">{g.gearName}</div>
+                            <div className="text-xs text-muted">{g.category}</div>
+                          </div>
+                          <div className="flex items-center gap-3 flex-shrink-0">
+                            <label className="flex items-center gap-1.5 text-xs">
+                              <input
+                                type="checkbox"
+                                checked={usage.wasUsed}
+                                onChange={e => setGearUsage(prev => ({
+                                  ...prev,
+                                  [g.id]: { ...usage, wasUsed: e.target.checked, wouldBringAgain: e.target.checked ? usage.wouldBringAgain : null }
+                                }))}
+                                className="rounded"
+                              />
+                              Used
+                            </label>
+                            {usage.wasUsed && (
+                              <label className="flex items-center gap-1.5 text-xs">
+                                <input
+                                  type="checkbox"
+                                  checked={usage.wouldBringAgain === true}
+                                  onChange={e => setGearUsage(prev => ({
+                                    ...prev,
+                                    [g.id]: { ...usage, wouldBringAgain: e.target.checked ? true : false }
+                                  }))}
+                                  className="rounded"
+                                />
+                                Bring again
+                              </label>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted mt-1">
+                    {Object.values(gearUsage).filter(g => g.wasUsed).length} of {completeModal.gear.length} items used
+                  </p>
+                </div>
+              )}
 
+              {/* Notes */}
               <div>
                 <label className="block text-sm font-medium mb-1">Notes (optional)</label>
                 <textarea
                   value={tripNotes}
                   onChange={e => setTripNotes(e.target.value)}
-                  placeholder="How did the gear perform? Any learnings?"
-                  className="w-full border rounded px-3 py-2 h-24"
+                  placeholder="Any other learnings? Gear that failed?"
+                  className="w-full border rounded px-3 py-2 h-20"
                 />
               </div>
             </div>

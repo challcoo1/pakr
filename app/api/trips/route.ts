@@ -38,7 +38,10 @@ export async function GET() {
             'gearName', tg.gear_name,
             'category', tg.gear_category,
             'isOwned', tg.is_owned,
-            'isRecommended', tg.is_recommended
+            'isRecommended', tg.is_recommended,
+            'wasUsed', tg.was_used,
+            'wouldBringAgain', tg.would_bring_again,
+            'usageNotes', tg.usage_notes
           ))
           FROM trip_gear tg
           WHERE tg.trip_id = ut.id
@@ -66,6 +69,12 @@ export async function GET() {
         missingGear: t.missing_gear,
         gear: t.gear || [],
         createdAt: t.created_at,
+        // New completion fields
+        completionStatus: t.completion_status,
+        trailRating: t.trail_rating,
+        trailReview: t.trail_review,
+        maxElevation: t.max_elevation,
+        conditionsEncountered: t.conditions_encountered,
       })),
     });
   } catch (error) {
@@ -192,21 +201,56 @@ export async function PATCH(request: Request) {
     }
     const userId = userResult[0].id;
 
-    const { tripId, status, completedDate, actualDuration, notes } = await request.json();
+    const {
+      tripId,
+      status,
+      completedDate,
+      actualDuration,
+      notes,
+      // New completion fields
+      completionStatus,
+      trailRating,
+      trailReview,
+      maxElevation,
+      conditionsEncountered,
+      // Gear usage updates
+      gearUpdates
+    } = await request.json();
 
     if (!tripId) {
       return NextResponse.json({ error: 'Trip ID required' }, { status: 400 });
     }
 
+    // Update trip
     await sql`
       UPDATE user_trips SET
         status = COALESCE(${status || null}, status),
         completed_date = COALESCE(${completedDate || null}, completed_date),
         actual_duration = COALESCE(${actualDuration || null}, actual_duration),
         notes = COALESCE(${notes || null}, notes),
+        completion_status = COALESCE(${completionStatus || null}, completion_status),
+        trail_rating = COALESCE(${trailRating || null}, trail_rating),
+        trail_review = COALESCE(${trailReview || null}, trail_review),
+        max_elevation = COALESCE(${maxElevation || null}, max_elevation),
+        conditions_encountered = COALESCE(${conditionsEncountered || null}, conditions_encountered),
         updated_at = NOW()
       WHERE id = ${tripId} AND user_id = ${userId}
     `;
+
+    // Update gear usage if provided
+    if (gearUpdates && Array.isArray(gearUpdates)) {
+      for (const gear of gearUpdates) {
+        if (gear.id) {
+          await sql`
+            UPDATE trip_gear SET
+              was_used = COALESCE(${gear.wasUsed}, was_used),
+              would_bring_again = COALESCE(${gear.wouldBringAgain}, would_bring_again),
+              usage_notes = COALESCE(${gear.usageNotes || null}, usage_notes)
+            WHERE id = ${gear.id}
+          `;
+        }
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

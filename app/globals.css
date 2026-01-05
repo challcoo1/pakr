@@ -288,6 +288,35 @@ p, .description, .field-note {
   gap: 0.5rem;
 }
 
+.gear-box-remove {
+  margin-left: auto;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  font-size: 16px;
+  line-height: 1;
+  border-radius: 50%;
+  transition: all 0.15s;
+  opacity: 0;
+}
+
+.gear-box:hover .gear-box-remove {
+  opacity: 1;
+}
+
+.gear-box-remove:hover {
+  color: #ef4444;
+  background: #fef2f2;
+}
+
+.gear-box-added {
+  border-color: #059669;
+  background: #f0fdf4;
+}
+
 .gear-box-bullet {
   color: var(--burnt);
   font-size: 0.75rem;

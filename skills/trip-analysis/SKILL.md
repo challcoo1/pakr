@@ -122,8 +122,11 @@ Trip description with activity type prefix (e.g., "Hiking / Tramping: Routeburn 
    - Note: If trail has no water sources, specify carry capacity needed. If huts provide potable water, filter may not be needed.
 
    **Food & Cooking:**
-   - "Stove" (canister, liquid fuel, alcohol - based on conditions)
-   - "Fuel" (canister, liquid - amount based on duration)
+   - "Food supply" (calculate total calories based on duration and intensity)
+     - Consider: trip duration, terrain difficulty, altitude, temperature
+     - Recommend calorie-dense options: nuts, cheese, chocolate, dehydrated meals
+   - "Stove" (canister, liquid fuel, alcohol - based on conditions and altitude)
+   - "Fuel" (amount based on duration, cooking style, altitude, and temperature)
    - "Cookware" / "Pot"
    - "Utensils" (spork, cup, bowl)
    - "Food storage" (bear canister, hang bag - when required)
