@@ -71,7 +71,7 @@ interface ProductMatch {
   imageUrl?: string;
   description?: string;
   productUrl?: string;
-  reviews?: Review[];
+  reviews?: ExternalReview[];
   specs: string;
   source?: 'database' | 'online';
 }
