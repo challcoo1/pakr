@@ -8,14 +8,41 @@
   --burnt: #CC5500;
   --forest: #2C5530;
   --muted: #6B6B6B;
+  --font-sans: var(--font-sans), 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-serif: var(--font-serif), Georgia, 'Times New Roman', serif;
 }
 
 body {
-  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: var(--font-serif);
   background-color: var(--cream);
   color: var(--charcoal);
   margin: 0;
   padding: 0;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* UI elements use sans-serif */
+button, input, select, textarea, label,
+.btn-primary, .btn-action, .settings-title, .settings-label,
+.gear-box-title, .gear-portfolio-header, .trip-box-name,
+.gear-rec-label, .gear-rec-alt-label, .condition-tag {
+  font-family: var(--font-sans);
+}
+
+/* Serif for body content */
+.gear-box-specs, .gear-rec-reason, .gear-box-result-status,
+.gear-portfolio-item-specs, .gear-portfolio-item-notes,
+p, .description, .field-note {
+  font-family: var(--font-serif);
+}
+
+/* Field notes styling */
+.field-note {
+  font-style: italic;
+  color: var(--muted);
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
 }
 
 .bg-cream {
