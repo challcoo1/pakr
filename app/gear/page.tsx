@@ -20,14 +20,26 @@ const COUNTRIES = [
 
 const getFlagUrl = (code: string) => `https://flagcdn.com/24x18/${code.toLowerCase()}.png`;
 
-interface Review {
+interface ExternalReview {
   source: string;
   url: string;
   rating?: string;
 }
 
+interface UserReview {
+  id: string;
+  rating: number;
+  title?: string;
+  review?: string;
+  conditions?: string;
+  created_at: string;
+  gear_id: string;
+  trip_name?: string;
+}
+
 interface GearItem {
   id: string;
+  gearCatalogId: string;
   name: string;
   brand: string;
   category: string;
@@ -36,10 +48,17 @@ interface GearItem {
   imageUrl?: string;
   description?: string;
   productUrl?: string;
-  reviews?: Review[];
+  reviews?: ExternalReview[];
   specs: string;
   notes?: string;
   addedAt: string;
+  userReview?: {
+    rating: number;
+    title?: string;
+    review?: string;
+    conditions?: string;
+    created_at: string;
+  };
 }
 
 interface ProductMatch {
@@ -92,6 +111,14 @@ export default function GearPage() {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
   const [brokenUrls, setBrokenUrls] = useState<Set<string>>(new Set());
+
+  // Review modal state
+  const [reviewingGear, setReviewingGear] = useState<GearItem | null>(null);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewTitle, setReviewTitle] = useState('');
+  const [reviewText, setReviewText] = useState('');
+  const [reviewConditions, setReviewConditions] = useState('');
+  const [isSavingReview, setIsSavingReview] = useState(false);
 
   // Auto-detect country on mount
   useEffect(() => {
@@ -218,6 +245,67 @@ export default function GearPage() {
       console.error('Failed to delete gear:', error);
     }
   };
+
+  const openReviewModal = (item: GearItem) => {
+    setReviewingGear(item);
+    setReviewRating(item.userReview?.rating || 0);
+    setReviewTitle(item.userReview?.title || '');
+    setReviewText(item.userReview?.review || '');
+    setReviewConditions(item.userReview?.conditions || '');
+  };
+
+  const closeReviewModal = () => {
+    setReviewingGear(null);
+    setReviewRating(0);
+    setReviewTitle('');
+    setReviewText('');
+    setReviewConditions('');
+  };
+
+  const handleSaveReview = async () => {
+    if (!reviewingGear || reviewRating === 0) return;
+
+    setIsSavingReview(true);
+    try {
+      const response = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gearId: reviewingGear.gearCatalogId,
+          rating: reviewRating,
+          title: reviewTitle || null,
+          review: reviewText || null,
+          conditions: reviewConditions || null,
+        }),
+      });
+
+      if (response.ok) {
+        await loadGear();
+        closeReviewModal();
+      }
+    } catch (error) {
+      console.error('Failed to save review:', error);
+    } finally {
+      setIsSavingReview(false);
+    }
+  };
+
+  // Star rating component
+  const StarRating = ({ rating, onRate, readonly = false }: { rating: number; onRate?: (r: number) => void; readonly?: boolean }) => (
+    <div className="flex gap-0.5">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          type="button"
+          onClick={() => !readonly && onRate?.(star)}
+          disabled={readonly}
+          className={`text-lg ${readonly ? 'cursor-default' : 'cursor-pointer hover:scale-110'} transition-transform`}
+        >
+          {star <= rating ? '★' : '☆'}
+        </button>
+      ))}
+    </div>
+  );
 
   // Group gear by category
   const gearByCategory = gear.reduce((acc, item) => {
@@ -437,6 +525,27 @@ export default function GearPage() {
                                 {item.notes && (
                                   <div className="gear-portfolio-item-notes">{item.notes}</div>
                                 )}
+                                {/* User review display */}
+                                <div className="mt-1 flex items-center gap-2">
+                                  {item.userReview ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => openReviewModal(item)}
+                                      className="flex items-center gap-1 text-yellow-500 hover:opacity-80"
+                                      title="Edit your review"
+                                    >
+                                      <StarRating rating={item.userReview.rating} readonly />
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => openReviewModal(item)}
+                                      className="text-xs text-blue-600 hover:underline"
+                                    >
+                                      + Add review
+                                    </button>
+                                  )}
+                                </div>
                                 {item.productUrl && (
                                   <a href={item.productUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
                                     View product
@@ -712,6 +821,90 @@ export default function GearPage() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Review Modal */}
+      {reviewingGear && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={closeReviewModal}>
+          <div className="settings-modal" style={{ maxWidth: '480px' }} onClick={e => e.stopPropagation()}>
+            <div className="settings-header">
+              <span className="settings-title">REVIEW GEAR</span>
+              <button type="button" onClick={closeReviewModal} className="settings-close">×</button>
+            </div>
+
+            <div className="settings-content">
+              {/* Gear being reviewed */}
+              <div className="mb-4 p-3 bg-gray-50 rounded">
+                <div className="font-medium">{reviewingGear.name}</div>
+                <div className="text-sm text-muted">{reviewingGear.specs}</div>
+              </div>
+
+              {/* Star rating */}
+              <div className="mb-4">
+                <label className="settings-label">Your Rating *</label>
+                <div className="flex items-center gap-2">
+                  <StarRating rating={reviewRating} onRate={setReviewRating} />
+                  {reviewRating > 0 && (
+                    <span className="text-sm text-muted">
+                      {reviewRating === 5 ? 'Excellent' : reviewRating === 4 ? 'Great' : reviewRating === 3 ? 'Good' : reviewRating === 2 ? 'Fair' : 'Poor'}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Title */}
+              <div className="mb-4">
+                <label className="settings-label">Review Title (optional)</label>
+                <input
+                  type="text"
+                  value={reviewTitle}
+                  onChange={(e) => setReviewTitle(e.target.value)}
+                  placeholder="e.g. Bombproof in all conditions"
+                  className="input-small w-full"
+                />
+              </div>
+
+              {/* Conditions */}
+              <div className="mb-4">
+                <label className="settings-label">Conditions Tested (optional)</label>
+                <input
+                  type="text"
+                  value={reviewConditions}
+                  onChange={(e) => setReviewConditions(e.target.value)}
+                  placeholder="e.g. Heavy rain, -10°C, alpine terrain"
+                  className="input-small w-full"
+                />
+              </div>
+
+              {/* Review text */}
+              <div className="mb-4">
+                <label className="settings-label">Your Review (optional)</label>
+                <textarea
+                  value={reviewText}
+                  onChange={(e) => setReviewText(e.target.value)}
+                  placeholder="Share your experience with this gear..."
+                  className="input-small w-full"
+                  rows={4}
+                />
+              </div>
+            </div>
+
+            <div className="settings-footer">
+              <div className="flex gap-2">
+                <button onClick={closeReviewModal} className="flex-1 px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveReview}
+                  disabled={reviewRating === 0 || isSavingReview}
+                  className="settings-save flex-1"
+                >
+                  {isSavingReview ? 'Saving...' : reviewingGear.userReview ? 'Update Review' : 'Save Review'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

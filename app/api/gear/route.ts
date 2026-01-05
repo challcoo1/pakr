@@ -88,6 +88,7 @@ export async function GET() {
         ug.subcategory as user_subcategory,
         ug.gender as user_gender,
         ug.created_at as added_at,
+        gc.id as gear_catalog_id,
         gc.name,
         gc.manufacturer as brand,
         gc.category as catalog_category,
@@ -104,9 +105,21 @@ export async function GET() {
       ORDER BY ug.created_at DESC
     `;
 
+    // Get user's reviews for their gear
+    const userReviews = await sql`
+      SELECT gr.gear_id, gr.rating, gr.title, gr.review, gr.conditions, gr.created_at
+      FROM gear_reviews gr
+      WHERE gr.user_id = ${userId}
+    `;
+    const reviewsByGearId = userReviews.reduce((acc: any, r: any) => {
+      acc[r.gear_id] = r;
+      return acc;
+    }, {});
+
     return NextResponse.json({
       gear: gear.map((g: any) => ({
         id: g.id,
+        gearCatalogId: g.gear_catalog_id,
         name: g.name,
         brand: g.brand,
         category: g.user_category || g.catalog_category || 'other',
@@ -119,6 +132,7 @@ export async function GET() {
         specs: formatSpecs(g.specs),
         notes: g.notes,
         addedAt: g.added_at,
+        userReview: reviewsByGearId[g.gear_catalog_id] || null,
       })),
     });
   } catch (error) {

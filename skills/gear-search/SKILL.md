@@ -58,13 +58,10 @@ IMAGE URL (CRITICAL - must be actual image file):
 - Backcountry: "https://content.backcountry.com/images/items/900/ARC/ARC1234/MAIN.jpg"
 - Do NOT return product page URLs - only image file URLs that can be loaded in an <img> tag
 
-REVIEWS (ONLY if you are confident the review exists):
-- Only include reviews you are CERTAIN exist - do NOT guess or fabricate URLs
-- Major brands (Arc'teryx, Patagonia, etc.) will have reviews on sites like Outdoor Gear Lab, Switchback Travel
-- Niche/local brands (Australian socks, small manufacturers) likely won't have reviews - return empty array []
-- NEVER return generic category pages like "best hiking socks" - only specific product reviews
-- If unsure whether a review exists, omit it - empty reviews array is fine
-- Review sites: Outdoor Gear Lab, Switchback Travel, REI Co-op, GearJunkie, CleverHiker
+REVIEWS:
+- DO NOT include external reviews - always return an empty array []
+- User reviews are the source of truth in this system
+- The app collects reviews directly from users who own and have tested the gear
 
 ## MODE 2: RECOMMEND (with trip context)
 
