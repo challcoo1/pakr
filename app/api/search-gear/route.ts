@@ -231,6 +231,40 @@ async function fetchFromLLM(query: string, category?: string) {
   }
 }
 
+// Get community ratings for a product by name
+async function getCommunityRatings(productName: string): Promise<{ avgRating: number | null; reviewCount: number } | null> {
+  try {
+    // Find the gear in catalog
+    const gear = await sql`
+      SELECT id FROM gear_catalog
+      WHERE LOWER(name) LIKE ${`%${productName.toLowerCase().split(' ').slice(0, 3).join('%')}%`}
+      LIMIT 1
+    `;
+
+    if (!gear[0]) return null;
+
+    // Get review stats
+    const stats = await sql`
+      SELECT
+        COUNT(*) as review_count,
+        ROUND(AVG(rating)::numeric, 1) as avg_rating
+      FROM gear_reviews
+      WHERE gear_id = ${gear[0].id}
+    `;
+
+    const reviewCount = parseInt(stats[0]?.review_count || '0');
+    if (reviewCount === 0) return null;
+
+    return {
+      avgRating: parseFloat(stats[0]?.avg_rating) || null,
+      reviewCount
+    };
+  } catch (error) {
+    console.error('Error getting community ratings:', error);
+    return null;
+  }
+}
+
 async function getRecommendation(query: string, category: string, tripContext: any, requirement: any, userLocation?: { code: string; name: string }) {
   try {
     const locationNote = userLocation
@@ -265,19 +299,30 @@ Recommend the best ${requirement.item} for this specific trip.`;
       try {
         const parsed = JSON.parse(content);
         if (parsed.topPick) {
+          // Get community ratings for top pick and alternatives
+          const topPickRatings = await getCommunityRatings(parsed.topPick.name);
+          const alternativesWithRatings = await Promise.all(
+            (parsed.alternatives || []).map(async (alt: any) => {
+              const ratings = await getCommunityRatings(alt.name);
+              return {
+                name: alt.name,
+                brand: alt.brand,
+                comparison: alt.comparison,
+                source: 'online',
+                communityRating: ratings
+              };
+            })
+          );
+
           return {
             topPick: {
               name: parsed.topPick.name,
               brand: parsed.topPick.brand,
               reason: parsed.topPick.reason,
-              source: 'online'
+              source: 'online',
+              communityRating: topPickRatings
             },
-            alternatives: (parsed.alternatives || []).map((alt: any) => ({
-              name: alt.name,
-              brand: alt.brand,
-              comparison: alt.comparison,
-              source: 'online'
-            }))
+            alternatives: alternativesWithRatings
           };
         }
       } catch {

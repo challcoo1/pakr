@@ -56,18 +56,25 @@ interface ProductMatch {
   isNew?: boolean;
 }
 
+interface CommunityRating {
+  avgRating: number;
+  reviewCount: number;
+}
+
 interface Recommendation {
   topPick: {
     name: string;
     brand: string;
     reason: string;
     source: string;
+    communityRating?: CommunityRating | null;
   } | null;
   alternatives: {
     name: string;
     brand: string;
     comparison: string;
     source: string;
+    communityRating?: CommunityRating | null;
   }[];
 }
 
@@ -1113,6 +1120,15 @@ export default function Home() {
                                 className="gear-rec-pick"
                               >
                                 <div className="gear-rec-name">{search.recommendation.topPick.name}</div>
+                                {search.recommendation.topPick.communityRating && (
+                                  <div className="text-sm text-yellow-600 mt-1">
+                                    {'★'.repeat(Math.round(search.recommendation.topPick.communityRating.avgRating))}
+                                    {'☆'.repeat(5 - Math.round(search.recommendation.topPick.communityRating.avgRating))}
+                                    <span className="text-muted ml-1">
+                                      {search.recommendation.topPick.communityRating.avgRating} from {search.recommendation.topPick.communityRating.reviewCount} {search.recommendation.topPick.communityRating.reviewCount === 1 ? 'user' : 'users'}
+                                    </span>
+                                  </div>
+                                )}
                                 <div className="gear-rec-reason">{search.recommendation.topPick.reason}</div>
                                 <div className="gear-rec-select">Select this →</div>
                               </button>
@@ -1134,7 +1150,15 @@ export default function Home() {
                                     })}
                                     className="gear-rec-alt"
                                   >
-                                    <span className="gear-rec-alt-name">{alt.name}</span>
+                                    <div className="flex-1">
+                                      <span className="gear-rec-alt-name">{alt.name}</span>
+                                      {alt.communityRating && (
+                                        <span className="text-yellow-600 text-xs ml-2">
+                                          {'★'.repeat(Math.round(alt.communityRating.avgRating))}
+                                          <span className="text-muted ml-1">({alt.communityRating.reviewCount})</span>
+                                        </span>
+                                      )}
+                                    </div>
                                     <span className="gear-rec-alt-diff">{alt.comparison}</span>
                                   </button>
                                 ))}
