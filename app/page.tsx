@@ -195,12 +195,21 @@ export default function Home() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
 
+  // Ignored gear (persisted in localStorage)
+  const [ignoredGear, setIgnoredGear] = useState<Set<string>>(new Set());
+
   // Load settings from localStorage on mount
   useEffect(() => {
     const savedSpecs = localStorage.getItem('pakr-specs-mode');
     const savedTheme = localStorage.getItem('pakr-theme');
+    const savedIgnored = localStorage.getItem('pakr-ignored-gear');
     if (savedSpecs === 'detailed') setExactSpecs(true);
     if (savedTheme === 'dark') setTheme('dark');
+    if (savedIgnored) {
+      try {
+        setIgnoredGear(new Set(JSON.parse(savedIgnored)));
+      } catch { /* ignore parse errors */ }
+    }
   }, []);
 
   // Apply theme class to document
@@ -213,6 +222,22 @@ export default function Home() {
     localStorage.setItem('pakr-theme', theme);
     setShowSettings(false);
   };
+
+  // Ignore a gear category permanently
+  const handleIgnoreGear = (item: string) => {
+    const normalized = item.toLowerCase();
+    setIgnoredGear(prev => {
+      const next = new Set(prev);
+      next.add(normalized);
+      localStorage.setItem('pakr-ignored-gear', JSON.stringify([...next]));
+      return next;
+    });
+    // Also remove from current trip
+    setExcludedGear(prev => new Set([...prev, item]));
+  };
+
+  // Check if gear is ignored (case-insensitive)
+  const isGearIgnored = (item: string) => ignoredGear.has(item.toLowerCase());
 
   // Auto-detect location on mount
   useEffect(() => {
@@ -1138,7 +1163,7 @@ export default function Home() {
 
             {/* Gear Requirements */}
             <div className="gear-boxes">
-              {trip.gear.filter(g => !excludedGear.has(g.item)).map((g) => {
+              {trip.gear.filter(g => !excludedGear.has(g.item) && !isGearIgnored(g.item)).map((g) => {
                 const entry = userGear[g.item] || { input: '', status: 'empty', reasons: [] };
                 const search = gearSearch[g.item] || { isSearching: false, isSearchingOnline: false, results: [], recommendation: null, showResults: false };
                 const status = getStatusIndicator(entry.status);
@@ -1163,21 +1188,30 @@ export default function Home() {
 
                     {/* Empty/typing state - show search input */}
                     {entry.status === 'empty' && (
-                      <div className="gear-box-input-row">
-                        <input
-                          type="text"
-                          value={entry.input}
-                          onChange={(e) => handleGearChange(g.item, e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleGearSubmit(g.item)}
-                          placeholder="Search your gear..."
-                          className="gear-box-input"
-                        />
+                      <div>
+                        <div className="gear-box-input-row">
+                          <input
+                            type="text"
+                            value={entry.input}
+                            onChange={(e) => handleGearChange(g.item, e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleGearSubmit(g.item)}
+                            placeholder="Search your gear..."
+                            className="gear-box-input"
+                          />
+                          <button
+                            onClick={() => handleRecommend(g.item)}
+                            disabled={search.isSearching || search.isSearchingOnline}
+                            className="gear-box-recommend"
+                          >
+                            {search.isSearching || search.isSearchingOnline ? 'Loading...' : 'Get recommendations →'}
+                          </button>
+                        </div>
                         <button
-                          onClick={() => handleRecommend(g.item)}
-                          disabled={search.isSearching || search.isSearchingOnline}
-                          className="gear-box-recommend"
+                          onClick={() => handleIgnoreGear(g.item)}
+                          className="gear-box-action"
+                          style={{ marginTop: '0.5rem' }}
                         >
-                          {search.isSearching || search.isSearchingOnline ? 'Loading...' : 'Get recommendations →'}
+                          Never show
                         </button>
                       </div>
                     )}
@@ -1209,6 +1243,12 @@ export default function Home() {
                             className="gear-box-action"
                           >
                             Change
+                          </button>
+                          <button
+                            onClick={() => handleIgnoreGear(g.item)}
+                            className="gear-box-action"
+                          >
+                            Never show
                           </button>
                           <button
                             onClick={() => handleRecommend(g.item)}
