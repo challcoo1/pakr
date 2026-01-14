@@ -61,6 +61,21 @@ interface CommunityRating {
   reviewCount: number;
 }
 
+interface WeatherData {
+  type: 'forecast' | 'historical';
+  location: string;
+  tempHigh: number;
+  tempLow: number;
+  precipitation: number;
+  description: string;
+  days?: {
+    date: string;
+    tempHigh: number;
+    tempLow: number;
+    precipitation: number;
+  }[];
+}
+
 interface Recommendation {
   topPick: {
     name: string;
@@ -175,6 +190,10 @@ export default function Home() {
   const [inventoryGear, setInventoryGear] = useState<{ id: string; name: string; category: string }[]>([]);
   const [showInventoryPicker, setShowInventoryPicker] = useState(false);
   const [userInventory, setUserInventory] = useState<{ id: string; name: string; category: string }[]>([]);
+
+  // Weather
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(false);
 
   // Load settings from localStorage on mount
   useEffect(() => {
@@ -358,6 +377,8 @@ export default function Home() {
         setTrip(analyzeData.trip);
         setExcludedGear(new Set());
         setInventoryGear([]);
+        setWeather(null);
+        fetchWeather(analyzeData.trip);
 
         const initial: Record<string, UserGearEntry> = {};
         analyzeData.trip.gear.forEach((g: GearRequirement) => {
@@ -410,6 +431,30 @@ export default function Home() {
       console.error('Analysis failed:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Fetch weather for trip
+  const fetchWeather = async (tripData: TripAnalysis) => {
+    setWeatherLoading(true);
+    try {
+      const response = await fetch('/api/weather', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: tripData.name,
+          region: tripData.region,
+          timeOfYear: tripData.timeOfYear,
+        }),
+      });
+      const data = await response.json();
+      if (data.weather) {
+        setWeather(data.weather);
+      }
+    } catch (error) {
+      console.error('Weather fetch failed:', error);
+    } finally {
+      setWeatherLoading(false);
     }
   };
 
@@ -1054,6 +1099,40 @@ export default function Home() {
                   {trip.elevation && trip.distance && ' | '}
                   {trip.distance && `Distance: ${trip.distance}`}
                 </p>
+              )}
+
+              {/* Weather Widget */}
+              {weatherLoading && (
+                <div className="weather-widget">
+                  <span className="weather-loading">Loading weather...</span>
+                </div>
+              )}
+              {weather && !weatherLoading && (
+                <div className="weather-widget">
+                  <div className="weather-temps">
+                    <span className="weather-high">{weather.tempHigh}°</span>
+                    <span className="weather-low">{weather.tempLow}°</span>
+                  </div>
+                  <div className="weather-details">
+                    <div className="weather-type">
+                      {weather.type === 'forecast' ? '7-Day Forecast' : `${trip.timeOfYear || 'Typical'} Average`}
+                    </div>
+                    <div className="weather-description">{weather.description}</div>
+                    <div className="weather-precip">{weather.precipitation}% chance of rain</div>
+                    {weather.type === 'forecast' && weather.days && (
+                      <div className="weather-days">
+                        {weather.days.slice(0, 5).map((day) => (
+                          <div key={day.date} className="weather-day">
+                            <span className="weather-day-name">
+                              {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' })}
+                            </span>
+                            <span className="weather-day-temp">{day.tempHigh}°/{day.tempLow}°</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
 
