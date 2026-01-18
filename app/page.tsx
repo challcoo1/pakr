@@ -454,11 +454,12 @@ export default function Home() {
                 const populated: Record<string, UserGearEntry> = { ...initial };
                 for (const [itemName, match] of Object.entries(optimizeData.matches)) {
                   if (match && typeof match === 'object' && 'name' in match) {
-                    const m = match as { name: string; score: number; reason: string };
+                    const m = match as { name: string; score: number; reason: string; weightG?: number | null };
                     populated[itemName] = {
                       input: m.name,
                       status: m.score >= 80 ? 'ideal' : m.score >= 60 ? 'suitable' : 'adequate',
                       reasons: [m.reason],
+                      weightG: m.weightG,
                     };
                   }
                 }

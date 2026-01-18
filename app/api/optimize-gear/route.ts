@@ -22,6 +22,7 @@ interface UserGear {
   brand: string;
   category: string;
   specs: any;
+  weightG?: number | null;
 }
 
 interface TripContext {
@@ -63,7 +64,8 @@ export async function POST(request: Request) {
         gc.name,
         gc.manufacturer as brand,
         gc.category as catalog_category,
-        gc.specs
+        gc.specs,
+        gc.weight_g
       FROM user_gear ug
       JOIN gear_catalog gc ON ug.gear_id = gc.id
       WHERE ug.user_id = ${userId}
@@ -80,6 +82,7 @@ export async function POST(request: Request) {
       brand: g.brand,
       category: g.user_category || g.catalog_category,
       specs: formatSpecs(g.specs),
+      weightG: g.weight_g,
     }));
 
     // Use AI to match gear to requirements with compatibility consideration
@@ -100,7 +103,7 @@ async function matchGearToRequirements(
   requirements: GearRequirement[],
   userGear: UserGear[],
   tripContext: TripContext
-): Promise<Record<string, { gearId: string; name: string; score: number; reason: string } | null>> {
+): Promise<Record<string, { gearId: string; name: string; score: number; reason: string; weightG?: number | null } | null>> {
 
   const prompt = `You are a gear optimization expert. Match the user's gear to trip requirements.
 
@@ -154,7 +157,23 @@ Only return the JSON object, no other text.`;
     // Extract JSON
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+      const aiMatches = JSON.parse(jsonMatch[0]);
+
+      // Enrich matches with weightG from user gear
+      const enrichedMatches: Record<string, { gearId: string; name: string; score: number; reason: string; weightG?: number | null } | null> = {};
+      for (const [reqItem, match] of Object.entries(aiMatches)) {
+        if (match && typeof match === 'object' && 'gearId' in match) {
+          const m = match as { gearId: string; name: string; score: number; reason: string };
+          const gear = userGear.find(g => g.id === m.gearId);
+          enrichedMatches[reqItem] = {
+            ...m,
+            weightG: gear?.weightG || null,
+          };
+        } else {
+          enrichedMatches[reqItem] = null;
+        }
+      }
+      return enrichedMatches;
     }
 
     return {};
