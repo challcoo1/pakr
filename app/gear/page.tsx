@@ -317,6 +317,14 @@ export default function GearPage() {
     return acc;
   }, {} as Record<string, GearItem[]>);
 
+  // Default all categories to collapsed on initial load
+  useEffect(() => {
+    if (gear.length > 0 && collapsedCategories.size === 0) {
+      const allCategories = new Set(gear.map(g => g.category || 'other'));
+      setCollapsedCategories(allCategories);
+    }
+  }, [gear, collapsedCategories.size]);
+
   // Not logged in
   if (status !== 'loading' && !session) {
     return (
@@ -530,7 +538,7 @@ export default function GearPage() {
                         </svg>
                         {category.toUpperCase()}
                       </span>
-                      <span className="text-white/60 text-sm ml-2">({items.length})</span>
+                      <span className="text-muted text-xs ml-1">({items.length})</span>
                     </button>
                     {!isCategoryCollapsed && (
                     <div className="gear-portfolio-items">

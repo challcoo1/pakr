@@ -928,11 +928,13 @@ p, .description, .field-note {
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  background: var(--charcoal);
-  color: white;
-  font-size: 0.75rem;
+  background: rgba(43, 43, 43, 0.06);
+  border-bottom: 1px solid rgba(43, 43, 43, 0.12);
+  color: var(--charcoal);
+  font-size: 0.6875rem;
   font-weight: 700;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .gear-portfolio-header-toggle {
@@ -944,11 +946,11 @@ p, .description, .field-note {
 }
 
 .gear-portfolio-header-toggle:hover {
-  background: #3a3a3a;
+  background: rgba(43, 43, 43, 0.1);
 }
 
 .gear-portfolio-header-toggle:active {
-  background: #444;
+  background: rgba(43, 43, 43, 0.14);
 }
 
 .gear-portfolio-header-toggle svg {
@@ -1027,7 +1029,9 @@ p, .description, .field-note {
 }
 
 :root.dark .gear-portfolio-header {
-  background: #333;
+  background: rgba(255, 255, 255, 0.06);
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+  color: #f5f1e8;
 }
 
 :root.dark .gear-portfolio-item:hover {

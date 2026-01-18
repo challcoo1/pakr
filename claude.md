@@ -75,17 +75,20 @@ pakr88 follows a **Mother Earth magazine aesthetic** - organic, minimal, hand-cr
 ## Component Patterns
 
 ### Section Headers
+Use subtle, warm backgrounds - not solid black:
 ```css
 .section-header {
-  background: var(--charcoal);
-  color: white;
+  background: rgba(43, 43, 43, 0.06);
+  border-bottom: 1px solid rgba(43, 43, 43, 0.12);
+  color: var(--charcoal);
   padding: 0.75rem 1rem;
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-weight: 700;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 ```
+Avoid solid black headers - they feel too stark and corporate.
 
 ### Gear Cards
 - Left accent stripe (4px burnt orange)
