@@ -23,7 +23,6 @@ interface UserGear {
   category: string;
   specs: any;
   weightG?: number | null;
-  weightEstimated?: boolean;
 }
 
 interface TripContext {
@@ -66,8 +65,7 @@ export async function POST(request: Request) {
         gc.manufacturer as brand,
         gc.category as catalog_category,
         gc.specs,
-        gc.weight_g,
-        gc.weight_estimated
+        gc.weight_g
       FROM user_gear ug
       JOIN gear_catalog gc ON ug.gear_id = gc.id
       WHERE ug.user_id = ${userId}
@@ -85,7 +83,6 @@ export async function POST(request: Request) {
       category: g.user_category || g.catalog_category,
       specs: formatSpecs(g.specs),
       weightG: g.weight_g,
-      weightEstimated: g.weight_estimated || false,
     }));
 
     // Use AI to match gear to requirements with compatibility consideration
@@ -106,7 +103,7 @@ async function matchGearToRequirements(
   requirements: GearRequirement[],
   userGear: UserGear[],
   tripContext: TripContext
-): Promise<Record<string, { gearId: string; name: string; score: number; reason: string; weightG?: number | null; weightEstimated?: boolean } | null>> {
+): Promise<Record<string, { gearId: string; name: string; score: number; reason: string; weightG?: number | null } | null>> {
 
   const prompt = `You are a gear optimization expert. Match the user's gear to trip requirements.
 
@@ -163,7 +160,7 @@ Only return the JSON object, no other text.`;
       const aiMatches = JSON.parse(jsonMatch[0]);
 
       // Enrich matches with weightG from user gear
-      const enrichedMatches: Record<string, { gearId: string; name: string; score: number; reason: string; weightG?: number | null; weightEstimated?: boolean } | null> = {};
+      const enrichedMatches: Record<string, { gearId: string; name: string; score: number; reason: string; weightG?: number | null } | null> = {};
       for (const [reqItem, match] of Object.entries(aiMatches)) {
         if (match && typeof match === 'object' && 'gearId' in match) {
           const m = match as { gearId: string; name: string; score: number; reason: string };
@@ -171,7 +168,6 @@ Only return the JSON object, no other text.`;
           enrichedMatches[reqItem] = {
             ...m,
             weightG: gear?.weightG || null,
-            weightEstimated: gear?.weightEstimated || false,
           };
         } else {
           enrichedMatches[reqItem] = null;

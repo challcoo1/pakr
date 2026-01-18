@@ -98,9 +98,7 @@ export async function GET() {
         gc.description,
         gc.product_url,
         gc.reviews,
-        gc.specs,
-        gc.weight_g,
-        gc.weight_estimated
+        gc.specs
       FROM user_gear ug
       JOIN gear_catalog gc ON ug.gear_id = gc.id
       WHERE ug.user_id = ${userId}
@@ -134,8 +132,6 @@ export async function GET() {
         specs: formatSpecs(g.specs),
         notes: g.notes,
         addedAt: g.added_at,
-        weightG: g.weight_g,
-        weightEstimated: g.weight_estimated || false,
         userReview: reviewsByGearId[g.gear_catalog_id] || null,
       })),
     });
