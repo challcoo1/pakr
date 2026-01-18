@@ -160,11 +160,50 @@ Required before saving:
 - [ ] `specs.weight` includes value, unit, and reference
 - [ ] `reviews.sources` has at least 1 entry with URL
 
+## WEIGHT ESTIMATION
+
+When exact weight cannot be found from manufacturer specs, estimate based on:
+
+1. **Similar products** - Same category, similar materials/features
+2. **Industry standards** - Typical weights for product type
+3. **Size reference** - Always estimate for Medium/Regular size
+
+### Estimation Output
+
+```json
+{
+  "specs": {
+    "weight": {
+      "value": 180,
+      "unit": "g",
+      "estimated": true,
+      "confidence": "medium",
+      "basis": "Similar merino base layers typically 150-210g"
+    }
+  }
+}
+```
+
+### Confidence Levels
+
+| Level | Criteria |
+|-------|----------|
+| high | Same brand/line has known weights, or very common product type |
+| medium | Similar products from other brands provide reference |
+| low | Unusual product, limited reference data |
+
+### Estimation Rules
+
+1. **Be conservative** - Estimate for medium size, round to nearest 5g
+2. **Flag clearly** - Always set `estimated: true`
+3. **Explain basis** - Brief note on how estimate was derived
+4. **Never guess blindly** - If no reasonable reference exists, return `null`
+
 ## ERROR HANDLING
 
 | Scenario | Action |
 |----------|--------|
-| No manufacturer specs found | Return error, do not guess |
+| No manufacturer specs found | Estimate weight if possible, flag as estimated |
 | No reviews found | Set `reviews.sources: []`, note in consensus |
 | Conflicting weights | Use manufacturer, note discrepancy |
 | Discontinued product | Include `discontinued: true` flag |

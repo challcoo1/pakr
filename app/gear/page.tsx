@@ -1,41 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession, signIn, signOut } from 'next-auth/react';
-import Link from 'next/link';
-import AnimatedLogo from '@/components/AnimatedLogo';
-import { BackpackIcon, MountainIcon } from '@/components/NavIcons';
-
-const COUNTRIES = [
-  { code: 'AU', name: 'Australia' },
-  { code: 'NZ', name: 'New Zealand' },
-  { code: 'US', name: 'United States' },
-  { code: 'GB', name: 'United Kingdom' },
-  { code: 'CA', name: 'Canada' },
-  { code: 'DE', name: 'Germany' },
-  { code: 'FR', name: 'France' },
-  { code: 'JP', name: 'Japan' },
-  { code: 'CH', name: 'Switzerland' },
-  { code: 'IT', name: 'Italy' },
-];
-
-const getFlagUrl = (code: string) => `https://flagcdn.com/24x18/${code.toLowerCase()}.png`;
+import { useSession, signIn } from 'next-auth/react';
+import Header from '@/components/Header';
+import StarRating, { getRatingLabel } from '@/components/StarRating';
+import { CATEGORY_CONFIG } from '@/lib/constants';
 
 interface ExternalReview {
   source: string;
   url: string;
   rating?: string;
-}
-
-interface UserReview {
-  id: string;
-  rating: number;
-  title?: string;
-  review?: string;
-  conditions?: string;
-  created_at: string;
-  gear_id: string;
-  trip_name?: string;
 }
 
 interface GearItem {
@@ -53,6 +27,8 @@ interface GearItem {
   specs: string;
   notes?: string;
   addedAt: string;
+  weightG?: number | null;
+  weightEstimated?: boolean;
   userReview?: {
     rating: number;
     title?: string;
@@ -77,22 +53,6 @@ interface ProductMatch {
   source?: 'database' | 'online';
 }
 
-// Category display configuration
-const CATEGORY_CONFIG: Record<string, { label: string; icon: string }> = {
-  'footwear': { label: 'FOOTWEAR', icon: '👟' },
-  'clothing_base': { label: 'BASE LAYERS', icon: '🧵' },
-  'clothing_mid': { label: 'MID LAYERS', icon: '🧥' },
-  'clothing_outer': { label: 'OUTER LAYERS', icon: '🧥' },
-  'clothing_accessories': { label: 'ACCESSORIES', icon: '🧤' },
-  'backpacks': { label: 'BACKPACKS', icon: '🎒' },
-  'shelter': { label: 'SHELTER', icon: '⛺' },
-  'sleep': { label: 'SLEEP SYSTEM', icon: '🛏️' },
-  'climbing': { label: 'CLIMBING GEAR', icon: '🧗' },
-  'safety': { label: 'SAFETY & NAVIGATION', icon: '🧭' },
-  'cooking': { label: 'COOKING', icon: '🍳' },
-  'other': { label: 'OTHER', icon: '📦' },
-};
-
 export default function GearPage() {
   const { data: session, status } = useSession();
   const [gear, setGear] = useState<GearItem[]>([]);
@@ -105,9 +65,6 @@ export default function GearPage() {
   const [selectedGender, setSelectedGender] = useState('');
   const [addingGear, setAddingGear] = useState<ProductMatch | null>(null);
   const [gearNotes, setGearNotes] = useState('');
-  const [showUserMenu, setShowUserMenu] = useState(false);
-  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
-  const [userCountry, setUserCountry] = useState<{ code: string; name: string } | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
@@ -122,28 +79,9 @@ export default function GearPage() {
   const [reviewConditions, setReviewConditions] = useState('');
   const [isSavingReview, setIsSavingReview] = useState(false);
 
-  // Auto-detect country on mount
-  useEffect(() => {
-    const saved = localStorage.getItem('pakr-country');
-    if (saved) {
-      setUserCountry(JSON.parse(saved));
-    } else {
-      fetch('https://ipapi.co/json/')
-        .then(r => r.json())
-        .then(data => {
-          const country = COUNTRIES.find(c => c.code === data.country_code);
-          if (country) setUserCountry(country);
-        })
-        .catch(() => {});
-    }
-  }, []);
-
-  // Save country preference
-  useEffect(() => {
-    if (userCountry) {
-      localStorage.setItem('pakr-country', JSON.stringify(userCountry));
-    }
-  }, [userCountry]);
+  // Weight editing state
+  const [editingWeightId, setEditingWeightId] = useState<string | null>(null);
+  const [editingWeightValue, setEditingWeightValue] = useState('');
 
   // Load user's gear
   useEffect(() => {
@@ -191,13 +129,8 @@ export default function GearPage() {
   const handleSelectGear = (product: ProductMatch) => {
     setAddingGear(product);
     setSearchResults([]);
-    // Use category and gender from LLM if provided
-    if (product.category) {
-      setSelectedCategory(product.category);
-    }
-    if (product.gender) {
-      setSelectedGender(product.gender);
-    }
+    if (product.category) setSelectedCategory(product.category);
+    if (product.gender) setSelectedGender(product.gender);
   };
 
   const handleSaveGear = async () => {
@@ -224,17 +157,22 @@ export default function GearPage() {
 
       if (response.ok) {
         await loadGear();
-        setShowAddModal(false);
-        setAddingGear(null);
-        setSearchQuery('');
-        setSelectedCategory('');
-        setSelectedGender('');
-        setGearNotes('');
-        setShowDetails(false);
+        closeAddModal();
       }
     } catch (error) {
       console.error('Failed to save gear:', error);
     }
+  };
+
+  const closeAddModal = () => {
+    setShowAddModal(false);
+    setAddingGear(null);
+    setSearchQuery('');
+    setSearchResults([]);
+    setSelectedCategory('');
+    setSelectedGender('');
+    setGearNotes('');
+    setShowDetails(false);
   };
 
   const handleDeleteGear = async (id: string) => {
@@ -292,22 +230,33 @@ export default function GearPage() {
     }
   };
 
-  // Star rating component
-  const StarRating = ({ rating, onRate, readonly = false }: { rating: number; onRate?: (r: number) => void; readonly?: boolean }) => (
-    <div className="flex gap-0.5">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <button
-          key={star}
-          type="button"
-          onClick={() => !readonly && onRate?.(star)}
-          disabled={readonly}
-          className={`text-lg ${readonly ? 'cursor-default' : 'cursor-pointer hover:scale-110'} transition-transform`}
-        >
-          {star <= rating ? '★' : '☆'}
-        </button>
-      ))}
-    </div>
-  );
+  const handleSaveWeight = async (gearCatalogId: string) => {
+    const weightG = parseInt(editingWeightValue);
+    if (isNaN(weightG) || weightG < 0) {
+      setEditingWeightId(null);
+      return;
+    }
+
+    try {
+      await fetch('/api/gear/weight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gearCatalogId, weightG }),
+      });
+      await loadGear();
+    } catch (error) {
+      console.error('Failed to save weight:', error);
+    } finally {
+      setEditingWeightId(null);
+      setEditingWeightValue('');
+    }
+  };
+
+  const formatWeight = (g: number | null | undefined, estimated?: boolean) => {
+    if (!g) return null;
+    const prefix = estimated ? '~' : '';
+    return g >= 1000 ? `${prefix}${(g / 1000).toFixed(2)}kg` : `${prefix}${g}g`;
+  };
 
   // Group gear by category
   const gearByCategory = gear.reduce((acc, item) => {
@@ -329,23 +278,7 @@ export default function GearPage() {
   if (status !== 'loading' && !session) {
     return (
       <>
-        <div className="red-band">
-          <div className="red-band-container">
-            <AnimatedLogo variant="light" size="small" />
-            <div className="flex items-center gap-4">
-              <button
-                type="button"
-                onClick={() => signIn('google')}
-                className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 transition-colors flex items-center justify-center"
-                title="Sign in"
-              >
-                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
+        <Header activePage="gear" />
         <div className="main-content">
           <div className="max-w-4xl mx-auto p-4">
             <div className="text-center py-12">
@@ -361,111 +294,7 @@ export default function GearPage() {
 
   return (
     <>
-      <div className="red-band">
-        <div className="red-band-container">
-          <AnimatedLogo variant="light" size="small" />
-          <div className="flex items-center gap-4">
-            {/* Nav links */}
-            <div className="flex items-center gap-1 md:gap-3">
-              <Link href="/gear" className="nav-link nav-link-active text-white text-sm font-medium" aria-label="My Gear">
-                <span className="nav-link-icon"><BackpackIcon isActive /></span>
-                <span className="nav-link-text">My Gear</span>
-              </Link>
-              <Link href="/trips" className="nav-link text-white/80 hover:text-white text-sm font-medium transition-colors" aria-label="My Trips">
-                <span className="nav-link-icon"><MountainIcon /></span>
-                <span className="nav-link-text">My Trips</span>
-              </Link>
-            </div>
-
-            {/* Country selector */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setShowCountryDropdown(!showCountryDropdown)}
-                className="hover:opacity-80 transition-opacity"
-                title={userCountry?.name || 'Select country'}
-              >
-                {userCountry ? (
-                  <img src={getFlagUrl(userCountry.code)} alt={userCountry.name} className="w-6 h-4 object-cover rounded-sm" />
-                ) : (
-                  <span className="text-white text-sm">🌍</span>
-                )}
-              </button>
-              {showCountryDropdown && (
-                <div className="absolute right-0 top-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 max-h-64 overflow-y-auto min-w-[180px]">
-                  {COUNTRIES.map((country) => (
-                    <button
-                      key={country.code}
-                      type="button"
-                      onClick={() => {
-                        setUserCountry(country);
-                        setShowCountryDropdown(false);
-                      }}
-                      className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2 ${userCountry?.code === country.code ? 'bg-gray-50' : ''}`}
-                    >
-                      <img src={getFlagUrl(country.code)} alt="" className="w-5 h-4 object-cover rounded-sm" />
-                      <span className="text-charcoal">{country.name}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* User avatar / login */}
-            <div className="relative">
-              {session?.user ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setShowUserMenu(!showUserMenu)}
-                    className="w-8 h-8 rounded-full overflow-hidden border-2 border-white/30 hover:border-white/60 transition-colors"
-                  >
-                    {session.user.image ? (
-                      <img src={session.user.image} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-white/20 flex items-center justify-center text-white text-sm font-medium">
-                        {session.user.name?.[0] || session.user.email?.[0] || '?'}
-                      </div>
-                    )}
-                  </button>
-                  {showUserMenu && (
-                    <div className="absolute right-0 top-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[160px]">
-                      <div className="px-3 py-2 border-b border-gray-100">
-                        <div className="text-sm font-medium text-charcoal">{session.user.name}</div>
-                        <div className="text-xs text-muted">{session.user.email}</div>
-                      </div>
-                      <Link
-                        href="/"
-                        className="block w-full px-3 py-2 text-left text-sm text-charcoal hover:bg-gray-100"
-                      >
-                        Home
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => signOut()}
-                        className="w-full px-3 py-2 text-left text-sm text-charcoal hover:bg-gray-100"
-                      >
-                        Sign out
-                      </button>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => signIn('google')}
-                  className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 transition-colors flex items-center justify-center"
-                  title="Sign in"
-                >
-                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+      <Header activePage="gear" />
 
       <div className="main-content">
         <div className="max-w-4xl mx-auto p-4">
@@ -475,10 +304,7 @@ export default function GearPage() {
               <h1 className="text-xl font-bold">Your Gear Portfolio</h1>
               <p className="text-muted text-sm">{gear.length} items</p>
             </div>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="btn-primary"
-            >
+            <button onClick={() => setShowAddModal(true)} className="btn-primary">
               + Add Gear
             </button>
           </div>
@@ -492,10 +318,7 @@ export default function GearPage() {
           {!isLoading && gear.length === 0 && (
             <div className="text-center py-12">
               <p className="text-muted mb-4">No gear in your portfolio yet.</p>
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="btn-primary"
-              >
+              <button onClick={() => setShowAddModal(true)} className="btn-primary">
                 Add Your First Item
               </button>
             </div>
@@ -541,113 +364,156 @@ export default function GearPage() {
                       <span className="text-muted text-xs ml-1">({items.length})</span>
                     </button>
                     {!isCategoryCollapsed && (
-                    <div className="gear-portfolio-items">
-                      {items.map((item) => {
-                        const isExpanded = expandedItems.has(item.id);
-                        const hasDetails = item.description || (item.reviews && item.reviews.length > 0);
-                        return (
-                          <div key={item.id} className="gear-portfolio-item flex-col items-stretch">
-                            <div className="flex items-start gap-3">
-                              {item.imageUrl && !brokenImages.has(item.id) && (
-                                <img
-                                  src={item.imageUrl}
-                                  alt={item.name}
-                                  className="w-16 h-16 object-cover rounded flex-shrink-0"
-                                  onError={() => setBrokenImages(prev => new Set(prev).add(item.id))}
-                                />
-                              )}
-                              <div className="gear-portfolio-item-main flex-1">
-                                <div className="gear-portfolio-item-name">{item.name}</div>
-                                <div className="gear-portfolio-item-specs">{item.specs}</div>
-                                {item.gender && (
-                                  <span className="text-xs text-muted">{item.gender}</span>
+                      <div className="gear-portfolio-items">
+                        {items.map((item) => {
+                          const isExpanded = expandedItems.has(item.id);
+                          const hasDetails = item.description || (item.reviews && item.reviews.length > 0);
+                          const isEditingWeight = editingWeightId === item.id;
+
+                          return (
+                            <div key={item.id} className="gear-portfolio-item flex-col items-stretch">
+                              <div className="flex items-start gap-3">
+                                {item.imageUrl && !brokenImages.has(item.id) && (
+                                  <img
+                                    src={item.imageUrl}
+                                    alt={item.name}
+                                    className="w-16 h-16 object-cover rounded flex-shrink-0"
+                                    onError={() => setBrokenImages(prev => new Set(prev).add(item.id))}
+                                  />
                                 )}
-                                {item.notes && (
-                                  <div className="gear-portfolio-item-notes">{item.notes}</div>
-                                )}
-                                {/* User review display */}
-                                <div className="mt-1 flex items-center gap-2">
-                                  {item.userReview ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => openReviewModal(item)}
-                                      className="flex items-center gap-1 star-rating hover:opacity-80"
-                                      title="Edit your review"
-                                    >
-                                      <StarRating rating={item.userReview.rating} readonly />
-                                    </button>
-                                  ) : (
-                                    <button
-                                      type="button"
-                                      onClick={() => openReviewModal(item)}
-                                      className="text-xs link hover:underline"
-                                    >
-                                      + Add review
-                                    </button>
-                                  )}
-                                </div>
-                                {item.productUrl && (
-                                  <a href={item.productUrl} target="_blank" rel="noopener noreferrer" className="text-xs link hover:underline">
-                                    View product
-                                  </a>
-                                )}
-                              </div>
-                              <button
-                                onClick={() => handleDeleteGear(item.id)}
-                                className="gear-portfolio-item-delete"
-                                title="Remove"
-                              >
-                                ×
-                              </button>
-                            </div>
-                            {hasDetails && (
-                              <div className="mt-2 pt-2 border-t border-gray-100">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const newSet = new Set(expandedItems);
-                                    if (isExpanded) {
-                                      newSet.delete(item.id);
-                                    } else {
-                                      newSet.add(item.id);
-                                    }
-                                    setExpandedItems(newSet);
-                                  }}
-                                  className="text-xs link hover:underline flex items-center gap-1"
-                                >
-                                  {isExpanded ? '▼' : '▶'} Details & Reviews
-                                </button>
-                                {isExpanded && (
-                                  <div className="mt-2 text-sm space-y-2">
-                                    {item.description && (
-                                      <p className="text-gray-600">{item.description}</p>
-                                    )}
-                                    {item.reviews && item.reviews.length > 0 && (
-                                      <div>
-                                        <div className="font-medium text-xs text-gray-500 mb-1">REVIEWS</div>
-                                        <div className="space-y-1">
-                                          {item.reviews.map((review, idx) => (
-                                            <a
-                                              key={idx}
-                                              href={review.url}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              className="block link hover:underline text-xs"
-                                            >
-                                              {review.source} {review.rating && `(${review.rating})`}
-                                            </a>
-                                          ))}
-                                        </div>
+                                <div className="gear-portfolio-item-main flex-1">
+                                  <div className="gear-portfolio-item-name">{item.name}</div>
+                                  <div className="gear-portfolio-item-specs">{item.specs}</div>
+
+                                  {/* Weight display/edit */}
+                                  <div className="flex items-center gap-2 mt-1">
+                                    {isEditingWeight ? (
+                                      <div className="flex items-center gap-1">
+                                        <input
+                                          type="number"
+                                          value={editingWeightValue}
+                                          onChange={(e) => setEditingWeightValue(e.target.value)}
+                                          placeholder="grams"
+                                          className="w-20 px-2 py-0.5 text-xs border rounded"
+                                          autoFocus
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter') handleSaveWeight(item.gearCatalogId);
+                                            if (e.key === 'Escape') setEditingWeightId(null);
+                                          }}
+                                        />
+                                        <span className="text-xs text-muted">g</span>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleSaveWeight(item.gearCatalogId)}
+                                          className="text-xs link"
+                                        >
+                                          Save
+                                        </button>
                                       </div>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setEditingWeightId(item.id);
+                                          setEditingWeightValue(item.weightG?.toString() || '');
+                                        }}
+                                        className={`text-xs ${item.weightG ? (item.weightEstimated ? 'text-muted italic' : 'text-charcoal') : 'link'}`}
+                                        title={item.weightEstimated ? 'Estimated weight - click to edit' : 'Click to edit weight'}
+                                      >
+                                        {formatWeight(item.weightG, item.weightEstimated) || '+ Add weight'}
+                                      </button>
                                     )}
                                   </div>
-                                )}
+
+                                  {item.gender && (
+                                    <span className="text-xs text-muted">{item.gender}</span>
+                                  )}
+                                  {item.notes && (
+                                    <div className="gear-portfolio-item-notes">{item.notes}</div>
+                                  )}
+                                  {/* User review display */}
+                                  <div className="mt-1 flex items-center gap-2">
+                                    {item.userReview ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => openReviewModal(item)}
+                                        className="flex items-center gap-1 star-rating hover:opacity-80"
+                                        title="Edit your review"
+                                      >
+                                        <StarRating rating={item.userReview.rating} readonly />
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => openReviewModal(item)}
+                                        className="text-xs link hover:underline"
+                                      >
+                                        + Add review
+                                      </button>
+                                    )}
+                                  </div>
+                                  {item.productUrl && (
+                                    <a href={item.productUrl} target="_blank" rel="noopener noreferrer" className="text-xs link hover:underline">
+                                      View product
+                                    </a>
+                                  )}
+                                </div>
+                                <button
+                                  onClick={() => handleDeleteGear(item.id)}
+                                  className="gear-portfolio-item-delete"
+                                  title="Remove"
+                                >
+                                  ×
+                                </button>
                               </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
+                              {hasDetails && (
+                                <div className="mt-2 pt-2 border-t border-gray-100">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const newSet = new Set(expandedItems);
+                                      if (isExpanded) {
+                                        newSet.delete(item.id);
+                                      } else {
+                                        newSet.add(item.id);
+                                      }
+                                      setExpandedItems(newSet);
+                                    }}
+                                    className="text-xs link hover:underline flex items-center gap-1"
+                                  >
+                                    {isExpanded ? '▼' : '▶'} Details & Reviews
+                                  </button>
+                                  {isExpanded && (
+                                    <div className="mt-2 text-sm space-y-2">
+                                      {item.description && (
+                                        <p className="text-gray-600">{item.description}</p>
+                                      )}
+                                      {item.reviews && item.reviews.length > 0 && (
+                                        <div>
+                                          <div className="font-medium text-xs text-gray-500 mb-1">REVIEWS</div>
+                                          <div className="space-y-1">
+                                            {item.reviews.map((review, idx) => (
+                                              <a
+                                                key={idx}
+                                                href={review.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="block link hover:underline text-xs"
+                                              >
+                                                {review.source} {review.rating && `(${review.rating})`}
+                                              </a>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     )}
                   </div>
                 );
@@ -659,25 +525,11 @@ export default function GearPage() {
 
       {/* Add Gear Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowAddModal(false)}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={closeAddModal}>
           <div className="settings-modal" style={{ maxWidth: '480px' }} onClick={e => e.stopPropagation()}>
             <div className="settings-header">
               <span className="settings-title">ADD GEAR</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAddModal(false);
-                  setAddingGear(null);
-                  setSearchResults([]);
-                  setSearchQuery('');
-                  setSelectedCategory('');
-                  setSelectedGender('');
-                  setShowDetails(false);
-                }}
-                className="settings-close"
-              >
-                ×
-              </button>
+              <button type="button" onClick={closeAddModal} className="settings-close">×</button>
             </div>
 
             <div className="settings-content">
@@ -798,7 +650,7 @@ export default function GearPage() {
                     )}
                   </div>
 
-                  {/* Category & Gender - from manufacturer */}
+                  {/* Category & Gender */}
                   <div className="flex gap-3 mb-4">
                     <div className="flex-1">
                       <label className="settings-label">Category</label>
@@ -888,9 +740,7 @@ export default function GearPage() {
                 <div className="flex items-center gap-2">
                   <StarRating rating={reviewRating} onRate={setReviewRating} />
                   {reviewRating > 0 && (
-                    <span className="text-sm text-muted">
-                      {reviewRating === 5 ? 'Excellent' : reviewRating === 4 ? 'Great' : reviewRating === 3 ? 'Good' : reviewRating === 2 ? 'Fair' : 'Poor'}
-                    </span>
+                    <span className="text-sm text-muted">{getRatingLabel(reviewRating)}</span>
                   )}
                 </div>
               </div>

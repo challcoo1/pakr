@@ -6,6 +6,7 @@ interface GearItem {
   item: string;
   specs: string;
   weightG?: number | null;
+  weightEstimated?: boolean;
   status?: 'empty' | 'ideal' | 'suitable' | 'adequate' | 'unsuitable';
 }
 
@@ -46,6 +47,8 @@ export default function PackSummary({ gear, isMatching = false }: PackSummaryPro
   const withWeight = selectedGear.filter(g => g.weightG);
   const totalWeight = withWeight.reduce((sum, g) => sum + (g.weightG || 0), 0);
   const unknownCount = selectedGear.length - withWeight.length;
+  const estimatedCount = withWeight.filter(g => g.weightEstimated).length;
+  const hasEstimates = estimatedCount > 0;
 
   const weightClass = getWeightClass(totalWeight);
 
@@ -62,7 +65,9 @@ export default function PackSummary({ gear, isMatching = false }: PackSummaryPro
       </div>
 
       <div className="pack-summary-main">
-        <span className="pack-summary-weight">{formatWeightSmart(totalWeight) || '0g'}</span>
+        <span className="pack-summary-weight">
+          {hasEstimates && '~'}{formatWeightSmart(totalWeight) || '0g'}
+        </span>
         <span className="pack-summary-class" style={{ color: weightClass.color }}>
           {weightClass.label}
         </span>
@@ -72,6 +77,11 @@ export default function PackSummary({ gear, isMatching = false }: PackSummaryPro
         <span className="pack-summary-count">
           {withWeight.length} item{withWeight.length !== 1 ? 's' : ''} weighed
         </span>
+        {estimatedCount > 0 && (
+          <span className="pack-summary-estimated">
+            · {estimatedCount} estimated
+          </span>
+        )}
         {unknownCount > 0 && (
           <span className="pack-summary-unknown">
             · {unknownCount} unknown

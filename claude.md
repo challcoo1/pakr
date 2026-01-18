@@ -144,19 +144,60 @@ Invert thoughtfully:
 - Gratuitous animations
 - Heavy charting libraries (use minimal SVG)
 
-## File Structure
+## Code Structure Rules
+
+### Page Size Limits
+- **Pages should be under 300 lines**. If a page exceeds this, it needs refactoring.
+- A 1600-line page component is a structural failure, not a feature.
+
+### Extract Early, Extract Often
+1. **Types** → `types/index.ts` - Never define interfaces inline in pages
+2. **Constants** → `lib/constants.ts` - Arrays, configs, mappings
+3. **Hooks** → `hooks/` - Any reusable state logic (3+ useState = consider a hook)
+4. **Modals** → Separate components - Every modal is its own file
+5. **Repeated UI** → Components - If it renders in a loop, extract it
+
+### Component Extraction Triggers
+Extract to a component when:
+- JSX block exceeds 50 lines
+- Same UI pattern appears twice
+- A section has its own state management
+- It's a modal, drawer, or overlay
+
+### Shared Components
+Use shared components instead of duplicating code:
+- `<Header>` - Navigation, user menu, country selector
+- `<StarRating>` - Rating display/input
+- Never copy-paste header/nav code between pages
+
+### Hook Extraction Triggers
+Extract to a custom hook when:
+- 3+ related useState calls
+- useEffect with complex logic
+- State + handlers that work together
+- Logic needed in multiple components
+
+### File Structure
 
 ```
 app/
-  page.tsx          # Main trip planning page
+  page.tsx          # Main trip planning page (<300 lines)
   gear/page.tsx     # My Gear portfolio
   trips/page.tsx    # My Trips list
   globals.css       # All styles (no CSS modules)
 components/
+  Header.tsx        # Shared header with nav, user menu
   AnimatedLogo.tsx  # Mountain bar waveform logo
   NavIcons.tsx      # Organic navigation icons
+  StarRating.tsx    # Rating display component
+  PackSummary.tsx   # Pack weight summary
   HistoricalWeatherCurve.tsx  # Bell curve visualization
+hooks/
+  useCountry.ts     # Country detection and persistence
+types/
+  index.ts          # Shared TypeScript interfaces
 lib/
+  constants.ts      # COUNTRIES, CATEGORY_CONFIG, etc.
   auth.ts           # NextAuth configuration
   db.ts             # Database connection
 ```

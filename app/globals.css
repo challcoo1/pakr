@@ -1368,6 +1368,11 @@ p, .description, .field-note {
   color: var(--burnt);
 }
 
+.pack-summary-estimated {
+  color: var(--muted);
+  font-style: italic;
+}
+
 /* Dark mode pack summary */
 :root.dark .pack-summary {
   background: #2a2a2a;
