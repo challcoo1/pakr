@@ -5,6 +5,7 @@ import { useSession, signIn, signOut } from 'next-auth/react';
 import AnimatedLogo from '@/components/AnimatedLogo';
 import { BackpackIcon, MountainIcon } from '@/components/NavIcons';
 import HistoricalWeatherCurve from '@/components/HistoricalWeatherCurve';
+import PackSummary from '@/components/PackSummary';
 
 interface GearRequirement {
   item: string;
@@ -47,6 +48,7 @@ interface UserGearEntry {
   input: string;
   status: 'ideal' | 'suitable' | 'adequate' | 'unsuitable' | 'empty';
   reasons: string[];
+  weightG?: number | null;
 }
 
 interface ProductMatch {
@@ -56,6 +58,7 @@ interface ProductMatch {
   specs: string;
   source?: 'database' | 'online';
   isNew?: boolean;
+  weightG?: number | null;
 }
 
 interface CommunityRating {
@@ -679,7 +682,7 @@ export default function Home() {
   const handleSelectProduct = async (item: string, product: ProductMatch) => {
     setUserGear(prev => ({
       ...prev,
-      [item]: { ...prev[item], input: product.name }
+      [item]: { ...prev[item], input: product.name, weightG: product.weightG }
     }));
     setGearSearch(prev => ({
       ...prev,
@@ -1196,6 +1199,19 @@ export default function Home() {
                 </>
               )}
             </div>
+
+            {/* Pack Weight Summary */}
+            <PackSummary
+              gear={trip.gear
+                .filter(g => !excludedGear.has(g.item) && !isGearIgnored(g.item))
+                .map(g => ({
+                  item: g.item,
+                  specs: g.specs,
+                  weightG: userGear[g.item]?.weightG,
+                  status: userGear[g.item]?.status || 'empty'
+                }))}
+              isMatching={isMatchingGear}
+            />
 
             {/* Gear Requirements */}
             {isMatchingGear && (

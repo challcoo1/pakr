@@ -6,6 +6,7 @@ import OpenAI from 'openai';
 import { sql } from '@/lib/db';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { parseWeightGrams } from '@/lib/parse-weight';
 
 console.log('[PAKR] OpenAI key prefix:', process.env.OPENAI_API_KEY?.substring(0, 15) || 'UNDEFINED');
 
@@ -96,7 +97,7 @@ async function searchDatabase(searchTerm: string) {
 
   const firstWord = words[0];
   const dbResults = await sql`
-    SELECT id, name, manufacturer, category, subcategory, gender, image_url, description, product_url, reviews, specs
+    SELECT id, name, manufacturer, category, subcategory, gender, image_url, description, product_url, reviews, specs, weight_g
     FROM gear_catalog
     WHERE
       LOWER(name) LIKE ${'%' + firstWord + '%'}
@@ -125,6 +126,7 @@ async function searchDatabase(searchTerm: string) {
     productUrl: row.product_url,
     reviews: row.reviews,
     specs: formatSpecs(row.specs),
+    weightG: row.weight_g,
     source: 'database'
   }));
 }
@@ -134,6 +136,10 @@ async function saveToDatabase(item: any) {
     console.log('Saving to DB:', item.name);
     console.log('  imageUrl:', item.imageUrl || 'NONE');
     console.log('  reviews:', item.reviews ? JSON.stringify(item.reviews).substring(0, 100) : 'NONE');
+
+    // Parse weight from specs
+    const weightG = parseWeightGrams(item.specs);
+    console.log('  weight_g:', weightG || 'NOT FOUND');
 
     // Check if already exists
     const existing = await sql`
@@ -150,14 +156,15 @@ async function saveToDatabase(item: any) {
           reviews = COALESCE(${item.reviews ? JSON.stringify(item.reviews) : null}::jsonb, reviews),
           category = COALESCE(NULLIF(${item.category || null}, ''), category),
           subcategory = COALESCE(NULLIF(${item.subcategory || null}, ''), subcategory),
-          gender = COALESCE(NULLIF(${item.gender || null}, ''), gender)
+          gender = COALESCE(NULLIF(${item.gender || null}, ''), gender),
+          weight_g = COALESCE(${weightG}, weight_g)
         WHERE id = ${existing[0].id}
       `;
       console.log('Updated existing gear:', item.name);
     } else {
       // Insert new
       await sql`
-        INSERT INTO gear_catalog (name, manufacturer, category, subcategory, gender, image_url, description, product_url, reviews, specs)
+        INSERT INTO gear_catalog (name, manufacturer, category, subcategory, gender, image_url, description, product_url, reviews, specs, weight_g)
         VALUES (
           ${item.name},
           ${item.brand || null},
@@ -168,7 +175,8 @@ async function saveToDatabase(item: any) {
           ${item.description || null},
           ${item.productUrl || null},
           ${item.reviews ? JSON.stringify(item.reviews) : null}::jsonb,
-          ${JSON.stringify({ raw: item.specs || '' })}
+          ${JSON.stringify({ raw: item.specs || '' })},
+          ${weightG}
         )
       `;
       console.log('Inserted new gear:', item.name);

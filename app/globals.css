@@ -1297,3 +1297,87 @@ p, .description, .field-note {
 :root.dark .weather-curve-label-mean {
   fill: #D4956E;
 }
+
+/* Pack Summary */
+.pack-summary {
+  background: white;
+  border: 1px solid var(--charcoal);
+  border-radius: 4px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.pack-summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.pack-summary-label {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.pack-summary-loading {
+  display: flex;
+  align-items: center;
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.pack-summary-main {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.pack-summary-weight {
+  font-family: var(--font-sans);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--charcoal);
+  line-height: 1;
+}
+
+.pack-summary-class {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.pack-summary-details {
+  margin-top: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.pack-summary-count {
+  color: var(--charcoal);
+}
+
+.pack-summary-unknown {
+  color: var(--burnt);
+}
+
+/* Dark mode pack summary */
+:root.dark .pack-summary {
+  background: #2a2a2a;
+  border-color: #444;
+}
+
+:root.dark .pack-summary-weight {
+  color: #f5f1e8;
+}
+
+:root.dark .pack-summary-count {
+  color: #f5f1e8;
+}
