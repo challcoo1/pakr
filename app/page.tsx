@@ -28,7 +28,7 @@ export default function Home() {
   const [userInventory, setUserInventory] = useState<{ id: string; name: string; category: string }[]>([]);
 
   // Trip planner hook
-  const planner = useTripPlanner({ getIsLoggedIn: () => !!session?.user });
+  const planner = useTripPlanner({ session });
 
   // Load settings
   useEffect(() => {
