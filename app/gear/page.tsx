@@ -563,7 +563,7 @@ export default function GearPage() {
                                     <button
                                       type="button"
                                       onClick={() => openReviewModal(item)}
-                                      className="flex items-center gap-1 text-yellow-500 hover:opacity-80"
+                                      className="flex items-center gap-1 star-rating hover:opacity-80"
                                       title="Edit your review"
                                     >
                                       <StarRating rating={item.userReview.rating} readonly />
@@ -572,14 +572,14 @@ export default function GearPage() {
                                     <button
                                       type="button"
                                       onClick={() => openReviewModal(item)}
-                                      className="text-xs text-blue-600 hover:underline"
+                                      className="text-xs link hover:underline"
                                     >
                                       + Add review
                                     </button>
                                   )}
                                 </div>
                                 {item.productUrl && (
-                                  <a href={item.productUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
+                                  <a href={item.productUrl} target="_blank" rel="noopener noreferrer" className="text-xs link hover:underline">
                                     View product
                                   </a>
                                 )}
@@ -605,7 +605,7 @@ export default function GearPage() {
                                     }
                                     setExpandedItems(newSet);
                                   }}
-                                  className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                                  className="text-xs link hover:underline flex items-center gap-1"
                                 >
                                   {isExpanded ? '▼' : '▶'} Details & Reviews
                                 </button>
@@ -624,7 +624,7 @@ export default function GearPage() {
                                               href={review.url}
                                               target="_blank"
                                               rel="noopener noreferrer"
-                                              className="block text-blue-600 hover:underline text-xs"
+                                              className="block link hover:underline text-xs"
                                             >
                                               {review.source} {review.rating && `(${review.rating})`}
                                             </a>
@@ -719,7 +719,7 @@ export default function GearPage() {
                             <div className="font-medium">{product.name}</div>
                             <div className="text-xs text-muted">{product.specs}</div>
                             {product.category && (
-                              <div className="text-xs text-blue-600">{product.category} {product.gender && `• ${product.gender}`}</div>
+                              <div className="text-xs link">{product.category} {product.gender && `• ${product.gender}`}</div>
                             )}
                           </div>
                         </button>
@@ -744,7 +744,7 @@ export default function GearPage() {
                         <div className="font-medium">{addingGear.name}</div>
                         <div className="text-sm text-muted">{addingGear.specs}</div>
                         {addingGear.productUrl && (
-                          <a href={addingGear.productUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
+                          <a href={addingGear.productUrl} target="_blank" rel="noopener noreferrer" className="text-xs link hover:underline">
                             View on manufacturer site
                           </a>
                         )}
@@ -757,7 +757,7 @@ export default function GearPage() {
                         <button
                           type="button"
                           onClick={() => setShowDetails(!showDetails)}
-                          className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                          className="text-xs link hover:underline flex items-center gap-1"
                         >
                           {showDetails ? '▼' : '▶'} Details & Reviews
                         </button>
@@ -776,7 +776,7 @@ export default function GearPage() {
                                       href={review.url}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="block text-blue-600 hover:underline text-xs"
+                                      className="block link hover:underline text-xs"
                                     >
                                       {review.source} {review.rating && `(${review.rating})`}
                                     </a>

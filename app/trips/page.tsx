@@ -216,13 +216,13 @@ export default function TripsPage() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => openCompleteModal(trip)}
-                          className="text-xs px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                          className="btn-forest"
                         >
                           Mark Complete
                         </button>
                         <button
                           onClick={() => handleDelete(trip.id)}
-                          className="text-xs px-2 py-1 text-red-600 hover:bg-red-50 rounded"
+                          className="btn-danger"
                         >
                           Delete
                         </button>
@@ -236,7 +236,7 @@ export default function TripsPage() {
                     </div>
 
                     {trip.missingGear && trip.missingGear.length > 0 && (
-                      <div className="text-xs text-orange-600 mb-2">
+                      <div className="text-xs text-burnt mb-2">
                         Missing: {trip.missingGear.join(', ')}
                       </div>
                     )}
@@ -248,7 +248,7 @@ export default function TripsPage() {
                           {trip.gear.slice(0, 8).map(g => (
                             <span
                               key={g.id}
-                              className={`text-xs px-2 py-0.5 rounded ${g.isOwned ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}
+                              className={`text-xs px-2 py-0.5 rounded ${g.isOwned ? 'tag-owned' : 'tag-needed'}`}
                             >
                               {g.gearName.split(' ').slice(0, 2).join(' ')}
                             </span>
@@ -280,12 +280,12 @@ export default function TripsPage() {
                       <div className="flex items-center gap-2">
                         {trip.completionStatus && trip.completionStatus !== 'full' && (
                           <span className={`text-xs px-2 py-1 rounded ${
-                            trip.completionStatus === 'partial' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                            trip.completionStatus === 'partial' ? 'tag-warning' : 'tag-neutral'
                           }`}>
                             {trip.completionStatus === 'partial' ? 'Partial' : 'Bailed'}
                           </span>
                         )}
-                        <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
+                        <span className="text-xs tag-success px-2 py-1 rounded">
                           {trip.completedDate}
                         </span>
                       </div>
@@ -295,7 +295,7 @@ export default function TripsPage() {
                     {trip.trailRating && trip.trailRating > 0 && (
                       <div className="flex items-center gap-1 mb-2">
                         {[1, 2, 3, 4, 5].map(star => (
-                          <span key={star} className="text-sm">
+                          <span key={star} className={`text-sm ${star <= trip.trailRating! ? 'star-rating' : 'star-rating-empty'}`}>
                             {star <= trip.trailRating! ? '★' : '☆'}
                           </span>
                         ))}
@@ -320,7 +320,7 @@ export default function TripsPage() {
                         <div className="text-xs text-muted">
                           {trip.gear.filter(g => g.wasUsed !== false).length} of {trip.gear.length} items used
                           {trip.gear.some(g => g.wouldBringAgain === false) && (
-                            <span className="text-orange-600 ml-2">
+                            <span className="text-burnt ml-2">
                               • {trip.gear.filter(g => g.wouldBringAgain === false).length} wouldn&apos;t bring again
                             </span>
                           )}
@@ -371,18 +371,18 @@ export default function TripsPage() {
                 <label className="block text-sm font-medium mb-1">How did it go?</label>
                 <div className="flex gap-2">
                   {[
-                    { value: 'full', label: 'Completed fully', color: 'green' },
-                    { value: 'partial', label: 'Partial completion', color: 'yellow' },
-                    { value: 'bailed', label: 'Bailed / turned back', color: 'red' },
+                    { value: 'full', label: 'Completed fully', style: 'success' },
+                    { value: 'partial', label: 'Partial completion', style: 'warning' },
+                    { value: 'bailed', label: 'Bailed / turned back', style: 'neutral' },
                   ].map(opt => (
                     <button
                       key={opt.value}
                       onClick={() => setCompletionStatus(opt.value as 'full' | 'partial' | 'bailed')}
                       className={`flex-1 px-3 py-2 text-sm rounded border transition-colors ${
                         completionStatus === opt.value
-                          ? opt.color === 'green' ? 'bg-green-100 border-green-500 text-green-700'
-                          : opt.color === 'yellow' ? 'bg-yellow-100 border-yellow-500 text-yellow-700'
-                          : 'bg-red-100 border-red-500 text-red-700'
+                          ? opt.style === 'success' ? 'tag-success border-forest'
+                          : opt.style === 'warning' ? 'tag-warning border-burnt'
+                          : 'tag-neutral border-muted'
                           : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
                       }`}
                     >
@@ -400,7 +400,7 @@ export default function TripsPage() {
                     <button
                       key={star}
                       onClick={() => setTrailRating(star)}
-                      className="text-2xl transition-colors"
+                      className={`text-2xl transition-colors ${star <= trailRating ? 'star-rating' : 'star-rating-empty'}`}
                     >
                       {star <= trailRating ? '★' : '☆'}
                     </button>
@@ -496,7 +496,7 @@ export default function TripsPage() {
               </button>
               <button
                 onClick={handleComplete}
-                className="flex-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                className="flex-1 px-4 py-2 bg-forest text-white rounded hover:opacity-90"
               >
                 Mark Complete
               </button>

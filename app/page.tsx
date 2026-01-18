@@ -1310,7 +1310,7 @@ export default function Home() {
                               >
                                 <div className="gear-rec-name">{search.recommendation.topPick.name}</div>
                                 {search.recommendation.topPick.communityRating && (
-                                  <div className="text-sm text-yellow-600 mt-1">
+                                  <div className="text-sm star-rating mt-1">
                                     {'★'.repeat(Math.round(search.recommendation.topPick.communityRating.avgRating))}
                                     {'☆'.repeat(5 - Math.round(search.recommendation.topPick.communityRating.avgRating))}
                                     <span className="text-muted ml-1">
@@ -1342,7 +1342,7 @@ export default function Home() {
                                     <div className="flex-1">
                                       <span className="gear-rec-alt-name">{alt.name}</span>
                                       {alt.communityRating && (
-                                        <span className="text-yellow-600 text-xs ml-2">
+                                        <span className="star-rating text-xs ml-2">
                                           {'★'.repeat(Math.round(alt.communityRating.avgRating))}
                                           <span className="text-muted ml-1">({alt.communityRating.reviewCount})</span>
                                         </span>
@@ -1422,7 +1422,7 @@ export default function Home() {
                     loadUserInventory();
                     setShowInventoryPicker(true);
                   }}
-                  className="text-sm text-red-700 hover:text-red-800 font-medium"
+                  className="text-sm link font-medium"
                 >
                   + Add from My Gear
                 </button>
@@ -1599,7 +1599,7 @@ export default function Home() {
               <button
                 onClick={handleSaveTrip}
                 disabled={isSavingTrip}
-                className="flex-1 px-4 py-2 bg-red-700 text-white rounded hover:bg-red-800 disabled:opacity-50"
+                className="flex-1 px-4 py-2 btn-primary disabled:opacity-50"
               >
                 {isSavingTrip ? 'Adding...' : 'Add Trip'}
               </button>
