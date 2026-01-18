@@ -112,6 +112,7 @@ export default function GearPage() {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
   const [brokenUrls, setBrokenUrls] = useState<Set<string>>(new Set());
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
 
   // Review modal state
   const [reviewingGear, setReviewingGear] = useState<GearItem | null>(null);
@@ -498,12 +499,40 @@ export default function GearPage() {
               {Object.entries(gearByCategory).map(([category, items]) => {
                 if (!items || items.length === 0) return null;
 
+                const isCategoryCollapsed = collapsedCategories.has(category);
+
+                const toggleCategory = () => {
+                  setCollapsedCategories(prev => {
+                    const newSet = new Set(prev);
+                    if (isCategoryCollapsed) {
+                      newSet.delete(category);
+                    } else {
+                      newSet.add(category);
+                    }
+                    return newSet;
+                  });
+                };
+
                 return (
                   <div key={category} className="gear-portfolio-section">
-                    <div className="gear-portfolio-header">
-                      <span>{category.toUpperCase()}</span>
+                    <button
+                      type="button"
+                      onClick={toggleCategory}
+                      className="gear-portfolio-header gear-portfolio-header-toggle"
+                    >
+                      <span className="flex items-center gap-2">
+                        <svg
+                          className={`w-3 h-3 transition-transform ${isCategoryCollapsed ? '' : 'rotate-90'}`}
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path d="M6 6L14 10L6 14V6Z" />
+                        </svg>
+                        {category.toUpperCase()}
+                      </span>
                       <span className="text-white/60 text-sm ml-2">({items.length})</span>
-                    </div>
+                    </button>
+                    {!isCategoryCollapsed && (
                     <div className="gear-portfolio-items">
                       {items.map((item) => {
                         const isExpanded = expandedItems.has(item.id);
@@ -611,6 +640,7 @@ export default function GearPage() {
                         );
                       })}
                     </div>
+                    )}
                   </div>
                 );
               })}

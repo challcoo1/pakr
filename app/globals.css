@@ -833,6 +833,26 @@ p, .description, .field-note {
   letter-spacing: 0.05em;
 }
 
+.gear-portfolio-header-toggle {
+  width: 100%;
+  justify-content: space-between;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.gear-portfolio-header-toggle:hover {
+  background: #3a3a3a;
+}
+
+.gear-portfolio-header-toggle:active {
+  background: #444;
+}
+
+.gear-portfolio-header-toggle svg {
+  flex-shrink: 0;
+}
+
 .gear-portfolio-items {
   padding: 0.5rem;
 }
