@@ -15,10 +15,10 @@ import { ACTIVITY_TYPES } from '@/types';
 
 interface UseTripPlannerOptions {
   onGearMatched?: () => void;
-  isLoggedIn: boolean;
+  getIsLoggedIn: () => boolean;
 }
 
-export function useTripPlanner({ onGearMatched, isLoggedIn }: UseTripPlannerOptions) {
+export function useTripPlanner({ onGearMatched, getIsLoggedIn }: UseTripPlannerOptions) {
   // Core trip state
   const [objective, setObjective] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -215,7 +215,7 @@ export function useTripPlanner({ onGearMatched, isLoggedIn }: UseTripPlannerOpti
         fetchWeather(data.trip);
 
         // Auto-match gear if logged in
-        if (isLoggedIn) {
+        if (getIsLoggedIn()) {
           setIsMatchingGear(true);
           fetch('/api/optimize-gear', {
             method: 'POST',
