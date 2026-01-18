@@ -3,6 +3,8 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import AnimatedLogo from '@/components/AnimatedLogo';
+import { BackpackIcon, MountainIcon } from '@/components/NavIcons';
+import HistoricalWeatherCurve from '@/components/HistoricalWeatherCurve';
 
 interface GearRequirement {
   item: string;
@@ -74,6 +76,15 @@ interface WeatherData {
     tempLow: number;
     precipitation: number;
   }[];
+  distribution?: {
+    month: string;
+    tempMean: number;
+    tempStdDev: number;
+    tempMin: number;
+    tempMax: number;
+    precipMean: number;
+    precipStdDev: number;
+  };
 }
 
 interface Recommendation {
@@ -823,12 +834,14 @@ export default function Home() {
           <div className="flex items-center gap-4">
             {/* Nav links - show when logged in */}
             {session?.user && (
-              <div className="flex items-center gap-3">
-                <a href="/gear" className="text-white/80 hover:text-white text-sm font-medium transition-colors">
-                  My Gear
+              <div className="flex items-center gap-1 md:gap-3">
+                <a href="/gear" className="nav-link text-white/80 hover:text-white text-sm font-medium transition-colors" aria-label="My Gear">
+                  <span className="nav-link-icon"><BackpackIcon /></span>
+                  <span className="nav-link-text">My Gear</span>
                 </a>
-                <a href="/trips" className="text-white/80 hover:text-white text-sm font-medium transition-colors">
-                  My Trips
+                <a href="/trips" className="nav-link text-white/80 hover:text-white text-sm font-medium transition-colors" aria-label="My Trips">
+                  <span className="nav-link-icon"><MountainIcon /></span>
+                  <span className="nav-link-text">My Trips</span>
                 </a>
               </div>
             )}
@@ -1133,31 +1146,45 @@ export default function Home() {
                 </div>
               )}
               {weather && !weatherLoading && (
-                <div className="weather-widget">
-                  <div className="weather-temps">
-                    <span className="weather-high">{weather.tempHigh}°</span>
-                    <span className="weather-low">{weather.tempLow}°</span>
-                  </div>
-                  <div className="weather-details">
-                    <div className="weather-type">
-                      {weather.type === 'forecast' ? '7-Day Forecast' : `${trip.timeOfYear || 'Typical'} Average`}
-                    </div>
-                    <div className="weather-description">{weather.description}</div>
-                    <div className="weather-precip">{weather.precipitation}% chance of rain</div>
-                    {weather.type === 'forecast' && weather.days && (
-                      <div className="weather-days">
-                        {weather.days.slice(0, 5).map((day) => (
-                          <div key={day.date} className="weather-day">
-                            <span className="weather-day-name">
-                              {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' })}
-                            </span>
-                            <span className="weather-day-temp">{day.tempHigh}°/{day.tempLow}°</span>
-                          </div>
-                        ))}
+                <>
+                  {/* Historical distribution with bell curve */}
+                  {weather.type === 'historical' && weather.distribution && (
+                    <HistoricalWeatherCurve
+                      month={weather.distribution.month}
+                      tempMean={weather.distribution.tempMean}
+                      tempStdDev={weather.distribution.tempStdDev}
+                      tempMin={weather.distribution.tempMin}
+                      tempMax={weather.distribution.tempMax}
+                      precipMean={weather.distribution.precipMean}
+                    />
+                  )}
+                  {/* Forecast display */}
+                  {weather.type === 'forecast' && (
+                    <div className="weather-widget">
+                      <div className="weather-temps">
+                        <span className="weather-high">{weather.tempHigh}°</span>
+                        <span className="weather-low">{weather.tempLow}°</span>
                       </div>
-                    )}
-                  </div>
-                </div>
+                      <div className="weather-details">
+                        <div className="weather-type">10-Day Forecast</div>
+                        <div className="weather-description">{weather.description}</div>
+                        <div className="weather-precip">{weather.precipitation}% chance of rain</div>
+                        {weather.days && (
+                          <div className="weather-days">
+                            {weather.days.slice(0, 5).map((day) => (
+                              <div key={day.date} className="weather-day">
+                                <span className="weather-day-name">
+                                  {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' })}
+                                </span>
+                                <span className="weather-day-temp">{day.tempHigh}°/{day.tempLow}°</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 

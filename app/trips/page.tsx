@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import Link from 'next/link';
 import AnimatedLogo from '@/components/AnimatedLogo';
+import { BackpackIcon, MountainIcon } from '@/components/NavIcons';
 
 interface TripGear {
   id: string;
@@ -165,12 +166,14 @@ export default function TripsPage() {
           <AnimatedLogo variant="light" size="small" />
           <div className="flex items-center gap-4">
             {/* Nav links */}
-            <div className="flex items-center gap-3">
-              <Link href="/gear" className="text-white/80 hover:text-white text-sm font-medium transition-colors">
-                My Gear
+            <div className="flex items-center gap-1 md:gap-3">
+              <Link href="/gear" className="nav-link text-white/80 hover:text-white text-sm font-medium transition-colors" aria-label="My Gear">
+                <span className="nav-link-icon"><BackpackIcon /></span>
+                <span className="nav-link-text">My Gear</span>
               </Link>
-              <Link href="/trips" className="text-white text-sm font-medium">
-                My Trips
+              <Link href="/trips" className="nav-link nav-link-active text-white text-sm font-medium" aria-label="My Trips">
+                <span className="nav-link-icon"><MountainIcon isActive /></span>
+                <span className="nav-link-text">My Trips</span>
               </Link>
             </div>
           </div>

@@ -13,6 +13,16 @@ interface WeatherData {
     tempLow: number;
     precipitation: number;
   }[];
+  // Historical distribution data for bell curve visualization
+  distribution?: {
+    month: string;
+    tempMean: number;
+    tempStdDev: number;
+    tempMin: number;
+    tempMax: number;
+    precipMean: number;
+    precipStdDev: number;
+  };
 }
 
 // Geocode location using OpenStreetMap Nominatim (free, no API key)
@@ -75,6 +85,20 @@ async function getForecast(lat: number, lon: number): Promise<WeatherData | null
   }
 }
 
+// Calculate standard deviation
+function calculateStdDev(values: number[], mean: number): number {
+  if (values.length === 0) return 0;
+  const squaredDiffs = values.map(v => Math.pow(v - mean, 2));
+  const avgSquaredDiff = squaredDiffs.reduce((sum, v) => sum + v, 0) / values.length;
+  return Math.sqrt(avgSquaredDiff);
+}
+
+// Month names for display
+const MONTH_NAMES = [
+  '', 'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+
 // Get historical averages for a specific month
 async function getHistoricalAverages(
   lat: number,
@@ -109,6 +133,18 @@ async function getHistoricalAverages(
 
     if (monthDays.length === 0) return null;
 
+    // Calculate temperature statistics (using daily average: (high+low)/2)
+    const dailyAvgTemps = monthDays.map((d: { tempHigh: number; tempLow: number }) => (d.tempHigh + d.tempLow) / 2);
+    const tempMean = dailyAvgTemps.reduce((sum: number, t: number) => sum + t, 0) / dailyAvgTemps.length;
+    const tempStdDev = calculateStdDev(dailyAvgTemps, tempMean);
+    const tempMin = Math.min(...dailyAvgTemps);
+    const tempMax = Math.max(...dailyAvgTemps);
+
+    // Calculate precipitation statistics
+    const precipValues = monthDays.map((d: { precipitation: number }) => d.precipitation);
+    const precipMean = precipValues.reduce((sum: number, p: number) => sum + p, 0) / precipValues.length;
+    const precipStdDev = calculateStdDev(precipValues, precipMean);
+
     const avgHigh = Math.round(
       monthDays.reduce((sum: number, d: { tempHigh: number }) => sum + d.tempHigh, 0) / monthDays.length
     );
@@ -128,6 +164,15 @@ async function getHistoricalAverages(
       tempLow: avgLow,
       precipitation: rainChance,
       description: getWeatherDescription(avgHigh, rainChance),
+      distribution: {
+        month: MONTH_NAMES[month],
+        tempMean: Math.round(tempMean * 10) / 10,
+        tempStdDev: Math.round(tempStdDev * 10) / 10,
+        tempMin: Math.round(tempMin),
+        tempMax: Math.round(tempMax),
+        precipMean: Math.round(precipMean * 10) / 10,
+        precipStdDev: Math.round(precipStdDev * 10) / 10,
+      },
     };
   } catch (error) {
     console.error('Historical weather error:', error);
@@ -199,11 +244,11 @@ export async function POST(request: Request) {
       const planned = new Date(plannedDate);
       const daysUntil = Math.ceil((planned.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-      if (daysUntil <= 7 && daysUntil >= 0) {
-        // Within forecast range
+      if (daysUntil <= 10 && daysUntil >= 0) {
+        // Within forecast range (10 days)
         weather = await getForecast(coords.lat, coords.lon);
       } else {
-        // Use historical for the planned month
+        // Use historical distribution for trips >10 days away
         const month = planned.getMonth() + 1;
         weather = await getHistoricalAverages(coords.lat, coords.lon, month);
       }

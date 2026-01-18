@@ -916,6 +916,63 @@ p, .description, .field-note {
   background: rgba(255,255,255,0.05);
 }
 
+/* Mobile Nav Icons */
+.nav-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s, color 0.2s;
+}
+
+.nav-link-text {
+  display: none;
+}
+
+.nav-link-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.nav-link-icon:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.nav-link-icon:active {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.nav-icon {
+  color: rgba(255, 255, 255, 0.75);
+  transition: color 0.2s;
+}
+
+.nav-link:hover .nav-icon,
+.nav-link-active .nav-icon {
+  color: white;
+}
+
+/* Desktop: show text, hide icons */
+@media (min-width: 768px) {
+  .nav-link-text {
+    display: inline;
+  }
+
+  .nav-link-icon {
+    display: none;
+  }
+
+  .nav-link {
+    padding: 0;
+    width: auto;
+    height: auto;
+  }
+}
+
 /* Weather Widget */
 .weather-widget {
   display: flex;
@@ -1011,4 +1068,106 @@ p, .description, .field-note {
 
 :root.dark .weather-day {
   background: rgba(255,255,255,0.05);
+}
+
+/* Historical Weather Distribution */
+:root {
+  --sage: #6B8E5F;
+  --sage-light: rgba(107, 142, 95, 0.15);
+  --terracotta: #C4785A;
+  --sand: #D4C4A8;
+}
+
+.weather-distribution {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(0,0,0,0.1);
+}
+
+.weather-distribution-header {
+  margin-bottom: 0.5rem;
+}
+
+.weather-distribution-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.weather-curve-svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.weather-curve-line {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.weather-curve-area {
+  opacity: 0.8;
+}
+
+.weather-curve-label {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.weather-curve-label-mean {
+  font-weight: 700;
+}
+
+.weather-distribution-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.weather-distribution-range {
+  color: var(--charcoal);
+}
+
+.weather-distribution-range strong {
+  color: var(--sage);
+  font-weight: 600;
+}
+
+.weather-distribution-precip {
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* Dark mode distribution */
+:root.dark .weather-distribution {
+  border-top-color: rgba(255,255,255,0.1);
+}
+
+:root.dark .weather-distribution-range {
+  color: #f5f1e8;
+}
+
+:root.dark .weather-curve-line {
+  stroke: #8BAF7F;
+}
+
+:root.dark .weather-curve-area {
+  fill: rgba(139, 175, 127, 0.2);
+}
+
+:root.dark .weather-curve-mean {
+  stroke: #D4956E;
+}
+
+:root.dark .weather-curve-label {
+  fill: #a0a0a0;
+}
+
+:root.dark .weather-curve-label-mean {
+  fill: #D4956E;
 }
