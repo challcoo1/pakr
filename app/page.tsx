@@ -234,20 +234,12 @@ export default function Home() {
     setShowSettings(false);
   };
 
-  // Ignore a gear category permanently
-  const handleIgnoreGear = (item: string) => {
-    const normalized = item.toLowerCase();
-    setIgnoredGear(prev => {
-      const next = new Set(prev);
-      next.add(normalized);
-      localStorage.setItem('pakr-ignored-gear', JSON.stringify([...next]));
-      return next;
-    });
-    // Also remove from current trip
+  // Remove gear from current trip only (not global)
+  const handleRemoveGear = (item: string) => {
     setExcludedGear(prev => new Set([...prev, item]));
   };
 
-  // Check if gear is ignored (case-insensitive)
+  // Check if gear is ignored globally (case-insensitive) - used by preferences
   const isGearIgnored = (item: string) => ignoredGear.has(item.toLowerCase());
 
   // Auto-detect location on mount
@@ -1234,11 +1226,11 @@ export default function Home() {
                           </button>
                         </div>
                         <button
-                          onClick={() => handleIgnoreGear(g.item)}
+                          onClick={() => handleRemoveGear(g.item)}
                           className="gear-box-action"
                           style={{ marginTop: '0.5rem' }}
                         >
-                          Never show
+                          Remove
                         </button>
                       </div>
                     )}
@@ -1272,10 +1264,10 @@ export default function Home() {
                             Change
                           </button>
                           <button
-                            onClick={() => handleIgnoreGear(g.item)}
+                            onClick={() => handleRemoveGear(g.item)}
                             className="gear-box-action"
                           >
-                            Never show
+                            Remove
                           </button>
                           <button
                             onClick={() => handleRecommend(g.item)}
