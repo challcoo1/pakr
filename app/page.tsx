@@ -171,6 +171,7 @@ export default function Home() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [objective, setObjective] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState('');
   const [tripResults, setTripResults] = useState<TripMatch[]>([]);
   const [showTripResults, setShowTripResults] = useState(false);
   const [selectedTrip, setSelectedTrip] = useState<TripMatch | null>(null);
@@ -205,6 +206,9 @@ export default function Home() {
   // Weather
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
+
+  // Gear matching (runs in background after trip loads)
+  const [isMatchingGear, setIsMatchingGear] = useState(false);
 
   // Ignored gear (persisted in localStorage)
   const [ignoredGear, setIgnoredGear] = useState<Set<string>>(new Set());
@@ -286,6 +290,7 @@ export default function Home() {
     if (!objective.trim() || isLoading) return;
 
     setIsLoading(true);
+    setLoadingStatus('Finding trips matching your search...');
     setTrip(null);
     setSelectedTrip(null);
     setTripResults([]);
@@ -383,6 +388,7 @@ export default function Home() {
     if (!tripConfirm) return;
 
     setIsLoading(true);
+    setLoadingStatus('Researching trip details and conditions...');
     setShowConfirm(false);
 
     try {
@@ -394,6 +400,7 @@ export default function Home() {
         fullObjective += `, ${tripConfirm.duration}`;
       }
 
+      setLoadingStatus('Analyzing terrain, hazards, and gear requirements...');
       const analyzeResponse = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -406,7 +413,6 @@ export default function Home() {
         setExcludedGear(new Set());
         setInventoryGear([]);
         setWeather(null);
-        fetchWeather(analyzeData.trip);
 
         const initial: Record<string, UserGearEntry> = {};
         analyzeData.trip.gear.forEach((g: GearRequirement) => {
@@ -414,50 +420,58 @@ export default function Home() {
         });
         setUserGear(initial);
 
-        // If logged in, try to auto-populate with user's gear
-        if (session?.user) {
-          try {
-            const optimizeResponse = await fetch('/api/optimize-gear', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                requirements: analyzeData.trip.gear,
-                tripContext: {
-                  name: analyzeData.trip.name,
-                  region: analyzeData.trip.region,
-                  duration: analyzeData.trip.duration,
-                  terrain: analyzeData.trip.terrain,
-                  hazards: analyzeData.trip.hazards,
-                  conditions: analyzeData.trip.conditions,
-                },
-              }),
-            });
-            const optimizeData = await optimizeResponse.json();
+        // Show trip immediately - don't wait for gear matching
+        setIsLoading(false);
 
-            if (optimizeData.matches) {
-              // Pre-populate matched gear
-              const populated: Record<string, UserGearEntry> = { ...initial };
-              for (const [itemName, match] of Object.entries(optimizeData.matches)) {
-                if (match && typeof match === 'object' && 'name' in match) {
-                  const m = match as { name: string; score: number; reason: string };
-                  populated[itemName] = {
-                    input: m.name,
-                    status: m.score >= 80 ? 'ideal' : m.score >= 60 ? 'suitable' : 'adequate',
-                    reasons: [m.reason],
-                  };
+        // Fetch weather and match gear in parallel (background)
+        fetchWeather(analyzeData.trip);
+
+        // If logged in, try to auto-populate with user's gear (background)
+        if (session?.user) {
+          setIsMatchingGear(true);
+          fetch('/api/optimize-gear', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              requirements: analyzeData.trip.gear,
+              tripContext: {
+                name: analyzeData.trip.name,
+                region: analyzeData.trip.region,
+                duration: analyzeData.trip.duration,
+                terrain: analyzeData.trip.terrain,
+                hazards: analyzeData.trip.hazards,
+                conditions: analyzeData.trip.conditions,
+              },
+            }),
+          })
+            .then(res => res.json())
+            .then(optimizeData => {
+              if (optimizeData.matches) {
+                // Pre-populate matched gear
+                const populated: Record<string, UserGearEntry> = { ...initial };
+                for (const [itemName, match] of Object.entries(optimizeData.matches)) {
+                  if (match && typeof match === 'object' && 'name' in match) {
+                    const m = match as { name: string; score: number; reason: string };
+                    populated[itemName] = {
+                      input: m.name,
+                      status: m.score >= 80 ? 'ideal' : m.score >= 60 ? 'suitable' : 'adequate',
+                      reasons: [m.reason],
+                    };
+                  }
                 }
+                setUserGear(populated);
               }
-              setUserGear(populated);
-            }
-          } catch (err) {
-            console.error('Gear optimization failed:', err);
-            // Continue without optimization - not critical
-          }
+            })
+            .catch(err => {
+              console.error('Gear optimization failed:', err);
+            })
+            .finally(() => {
+              setIsMatchingGear(false);
+            });
         }
       }
     } catch (error) {
       console.error('Analysis failed:', error);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -983,7 +997,10 @@ export default function Home() {
         <main className="max-w-4xl mx-auto px-4 pb-4">
         {isLoading && !showConfirm && (
           <div className="text-center py-12 text-muted">
-            Searching...
+            <div className="flex items-center justify-center gap-3">
+              <span className="inline-block w-4 h-4 border-2 border-muted border-t-burnt rounded-full animate-spin" />
+              <span>{loadingStatus || 'Loading...'}</span>
+            </div>
           </div>
         )}
 
@@ -1181,6 +1198,12 @@ export default function Home() {
             </div>
 
             {/* Gear Requirements */}
+            {isMatchingGear && (
+              <div className="text-sm text-muted italic mb-3 flex items-center gap-2">
+                <span className="inline-block w-3 h-3 border-2 border-muted border-t-burnt rounded-full animate-spin" />
+                Checking your gear inventory for matches...
+              </div>
+            )}
             <div className="gear-boxes">
               {trip.gear.filter(g => !excludedGear.has(g.item) && !isGearIgnored(g.item)).map((g) => {
                 const entry = userGear[g.item] || { input: '', status: 'empty', reasons: [] };
