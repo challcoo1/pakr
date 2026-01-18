@@ -215,7 +215,9 @@ export function useTripPlanner({ onGearMatched, session }: UseTripPlannerOptions
         fetchWeather(data.trip);
 
         // Auto-match gear if logged in
+        console.log('[GEAR MATCH] session?.user:', !!session?.user, 'session:', session);
         if (session?.user) {
+          console.log('[GEAR MATCH] Starting gear optimization...');
           setIsMatchingGear(true);
           fetch('/api/optimize-gear', {
             method: 'POST',
@@ -234,7 +236,9 @@ export function useTripPlanner({ onGearMatched, session }: UseTripPlannerOptions
           })
             .then(res => res.json())
             .then(optimizeData => {
+              console.log('[GEAR MATCH] Response:', optimizeData);
               if (optimizeData.matches) {
+                console.log('[GEAR MATCH] Found matches:', Object.keys(optimizeData.matches).length);
                 const populated: Record<string, UserGearEntry> = { ...initial };
                 for (const [itemName, match] of Object.entries(optimizeData.matches)) {
                   if (match && typeof match === 'object' && 'name' in match) {
@@ -248,6 +252,7 @@ export function useTripPlanner({ onGearMatched, session }: UseTripPlannerOptions
                     };
                   }
                 }
+                console.log('[GEAR MATCH] Setting populated gear:', Object.keys(populated).filter(k => populated[k].input).length, 'items matched');
                 setUserGear(populated);
                 onGearMatched?.();
               }
