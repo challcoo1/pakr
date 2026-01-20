@@ -4,7 +4,7 @@ import { useState, useEffect, FormEvent } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import AnimatedLogo from '@/components/AnimatedLogo';
 import { BackpackIcon, MountainIcon } from '@/components/NavIcons';
-import HistoricalWeatherCurve from '@/components/HistoricalWeatherCurve';
+import WeatherWidget from '@/components/WeatherWidget';
 import PackSummary from '@/components/PackSummary';
 
 interface GearRequirement {
@@ -128,7 +128,7 @@ const ACTIVITY_TYPES = [
 // Confirmation step fields
 interface TripConfirm {
   place: string;
-  timeOfYear: string;
+  plannedDate: string;
   activity: string;
   duration: string;
 }
@@ -271,22 +271,6 @@ export default function Home() {
     detectLocation();
   }, []);
 
-  // Extract time of year from query string
-  const extractTimeOfYear = (query: string): string => {
-    const months = ['january', 'february', 'march', 'april', 'may', 'june',
-                    'july', 'august', 'september', 'october', 'november', 'december'];
-    const seasons = ['spring', 'summer', 'autumn', 'fall', 'winter'];
-    const lower = query.toLowerCase();
-
-    for (const month of months) {
-      if (lower.includes(month)) return month.charAt(0).toUpperCase() + month.slice(1);
-    }
-    for (const season of seasons) {
-      if (lower.includes(season)) return season.charAt(0).toUpperCase() + season.slice(1);
-    }
-    return '';
-  };
-
   // Initial search - shows confirmation step
   const handleSearch = async (e: FormEvent) => {
     e.preventDefault();
@@ -320,11 +304,10 @@ export default function Home() {
 
       // Single match or no match - show confirmation
       const match = searchData.results?.[0];
-      const timeOfYear = extractTimeOfYear(objective);
 
       setTripConfirm({
         place: match?.name || objective.trim(),
-        timeOfYear: timeOfYear,
+        plannedDate: '',
         activity: 'hiking',
         duration: match?.duration || '',
       });
@@ -340,16 +323,22 @@ export default function Home() {
   // User selects from multiple trip options - goes to confirmation
   const handleSelectTrip = (tripMatch: TripMatch) => {
     setShowTripResults(false);
-    const timeOfYear = extractTimeOfYear(objective);
 
     setTripConfirm({
       place: tripMatch.name,
-      timeOfYear: timeOfYear,
+      plannedDate: '',
       activity: 'hiking',
       duration: tripMatch.duration,
     });
     setSelectedTrip(tripMatch);
     setShowConfirm(true);
+  };
+
+  // Get month name from date string
+  const getMonthFromDate = (dateStr: string): string => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'long' });
   };
 
   // Re-search with updated confirmation fields
@@ -361,7 +350,8 @@ export default function Home() {
     try {
       // Build query from fields
       let query = tripConfirm.place;
-      if (tripConfirm.timeOfYear) query += ` in ${tripConfirm.timeOfYear}`;
+      const month = getMonthFromDate(tripConfirm.plannedDate);
+      if (month) query += ` in ${month}`;
 
       const searchResponse = await fetch('/api/search-trip', {
         method: 'POST',
@@ -398,7 +388,8 @@ export default function Home() {
       // Build full objective from confirmed fields
       const activityLabel = ACTIVITY_TYPES.find(t => t.value === tripConfirm.activity)?.label || tripConfirm.activity;
       let fullObjective = `${activityLabel}: ${tripConfirm.place}`;
-      if (tripConfirm.timeOfYear) fullObjective += ` in ${tripConfirm.timeOfYear}`;
+      const month = getMonthFromDate(tripConfirm.plannedDate);
+      if (month) fullObjective += ` in ${month}`;
       if (tripConfirm.duration && !tripConfirm.duration.includes('missing')) {
         fullObjective += `, ${tripConfirm.duration}`;
       }
@@ -427,7 +418,7 @@ export default function Home() {
         setIsLoading(false);
 
         // Fetch weather and match gear in parallel (background)
-        fetchWeather(analyzeData.trip);
+        fetchWeather(analyzeData.trip, tripConfirm.plannedDate);
 
         // If logged in, try to auto-populate with user's gear (background)
         if (session?.user) {
@@ -481,7 +472,7 @@ export default function Home() {
   };
 
   // Fetch weather for trip
-  const fetchWeather = async (tripData: TripAnalysis) => {
+  const fetchWeather = async (tripData: TripAnalysis, plannedDate?: string) => {
     setWeatherLoading(true);
     try {
       const response = await fetch('/api/weather', {
@@ -491,6 +482,7 @@ export default function Home() {
           location: tripData.name,
           region: tripData.region,
           timeOfYear: tripData.timeOfYear,
+          plannedDate: plannedDate || null,
         }),
       });
       const data = await response.json();
@@ -1058,18 +1050,18 @@ export default function Home() {
                 )}
               </div>
 
-              {/* Time of Year */}
+              {/* Trip Date */}
               <div>
-                <label className="block text-sm font-medium mb-1">Time of Year</label>
+                <label className="block text-sm font-medium mb-1">Trip Date</label>
                 <input
-                  type="text"
-                  value={tripConfirm.timeOfYear}
-                  onChange={(e) => setTripConfirm({ ...tripConfirm, timeOfYear: e.target.value })}
-                  className={`input-small w-full ${!tripConfirm.timeOfYear ? 'border-burnt' : ''}`}
-                  placeholder={tripConfirm.timeOfYear || 'Missing - enter month or season'}
+                  type="date"
+                  value={tripConfirm.plannedDate}
+                  onChange={(e) => setTripConfirm({ ...tripConfirm, plannedDate: e.target.value })}
+                  className={`input-small w-full ${!tripConfirm.plannedDate ? 'border-burnt' : ''}`}
+                  min={new Date().toISOString().split('T')[0]}
                 />
-                {!tripConfirm.timeOfYear && (
-                  <div className="text-xs text-burnt mt-1">Missing</div>
+                {!tripConfirm.plannedDate && (
+                  <div className="text-xs text-burnt mt-1">Required</div>
                 )}
               </div>
 
@@ -1118,7 +1110,7 @@ export default function Home() {
               {/* Confirm button */}
               <button
                 onClick={handleConfirmAnalyze}
-                disabled={!tripConfirm.place || isLoading}
+                disabled={!tripConfirm.place || !tripConfirm.plannedDate || isLoading}
                 className="btn-primary w-full mt-4"
               >
                 {isLoading ? 'Analyzing...' : 'Analyze Gear Requirements'}
@@ -1153,52 +1145,11 @@ export default function Home() {
               )}
 
               {/* Weather Widget */}
-              {weatherLoading && (
-                <div className="weather-widget">
-                  <span className="weather-loading">Loading weather...</span>
-                </div>
-              )}
-              {weather && !weatherLoading && (
-                <>
-                  {/* Historical distribution with bell curve */}
-                  {weather.type === 'historical' && weather.distribution && (
-                    <HistoricalWeatherCurve
-                      month={weather.distribution.month}
-                      tempMean={weather.distribution.tempMean}
-                      tempStdDev={weather.distribution.tempStdDev}
-                      tempMin={weather.distribution.tempMin}
-                      tempMax={weather.distribution.tempMax}
-                      precipMean={weather.distribution.precipMean}
-                    />
-                  )}
-                  {/* Forecast display */}
-                  {weather.type === 'forecast' && (
-                    <div className="weather-widget">
-                      <div className="weather-temps">
-                        <span className="weather-high">{weather.tempHigh}°</span>
-                        <span className="weather-low">{weather.tempLow}°</span>
-                      </div>
-                      <div className="weather-details">
-                        <div className="weather-type">10-Day Forecast</div>
-                        <div className="weather-description">{weather.description}</div>
-                        <div className="weather-precip">{weather.precipitation}% chance of rain</div>
-                        {weather.days && (
-                          <div className="weather-days">
-                            {weather.days.slice(0, 5).map((day) => (
-                              <div key={day.date} className="weather-day">
-                                <span className="weather-day-name">
-                                  {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' })}
-                                </span>
-                                <span className="weather-day-temp">{day.tempHigh}°/{day.tempLow}°</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
+              <WeatherWidget
+                weather={weather}
+                elevation={trip.elevation}
+                loading={weatherLoading}
+              />
             </div>
 
             {/* Pack Weight Summary */}
@@ -1490,6 +1441,7 @@ export default function Home() {
                   if (!session) {
                     signIn('google');
                   } else {
+                    setPlannedDate(tripConfirm?.plannedDate || '');
                     setShowSaveModal(true);
                   }
                 }}
@@ -1612,12 +1564,13 @@ export default function Home() {
             )}
 
             <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">Planned Date (optional)</label>
+              <label className="block text-sm font-medium mb-1">Trip Date</label>
               <input
                 type="date"
                 value={plannedDate}
                 onChange={e => setPlannedDate(e.target.value)}
                 className="w-full border rounded px-3 py-2"
+                min={new Date().toISOString().split('T')[0]}
               />
             </div>
 
