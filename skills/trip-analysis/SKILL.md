@@ -18,6 +18,18 @@ Trip description with activity type prefix (e.g., "Hiking / Tramping: Routeburn 
 
 **IMPORTANT:** Only include gear categories relevant to the specified activity. Do NOT include ski touring gear for hiking trips, or climbing gear for snowshoeing.
 
+## CRITICAL: ELEVATION CALCULATION
+
+For multi-day trips, elevation MUST be TOTAL gain from starting town/trailhead to summit, NOT just the final day.
+
+WRONG: "1,200m gain" (Matterhorn hut to summit only)
+RIGHT: "2,850m gain | Max: 4,478m" (Zermatt to summit = Day 1 + Day 2)
+
+Examples:
+- Matterhorn via Hörnli: 2,850m gain | Max: 4,478m (Zermatt 1,620m → Hörnlihütte 3,260m → Summit 4,478m)
+- Mont Blanc via Gouter: 3,800m gain | Max: 4,808m (Les Houches → Gouter Hut → Summit)
+- Routeburn Track: 1,300m gain | Max: 1,255m (cumulative ups over 3 days)
+
 ## OUTPUT
 
 ```json
@@ -27,8 +39,8 @@ Trip description with activity type prefix (e.g., "Hiking / Tramping: Routeburn 
     "region": "[region, country]",
     "timeOfYear": "[month or season]",
     "duration": "[X days]",
-    "distance": "[Xkm]",
-    "elevation": "[Xm gain]",
+    "distance": "[Xkm total]",
+    "elevation": "[Xm gain | Max: Ym] - TOTAL for full trip, not just summit day",
     "grading": {
       "local": "[local grading system, e.g. NZ Track 3]",
       "international": "[T1-T6 or equivalent]",
