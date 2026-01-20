@@ -30,13 +30,33 @@ Return matching trips as JSON array:
 
 ## CRITICAL: ELEVATION CALCULATION
 
-**DO NOT give only the summit day elevation.** For multi-day trips, elevation MUST include ALL days:
+**DO NOT give only the summit day elevation.** For multi-day trips, elevation MUST include ALL days.
 
-- Matterhorn via Hörnli: 2,850m gain (Zermatt 1,620m → Summit 4,478m), NOT 1,200m (hut to summit only)
-- Mont Blanc via Gouter: 3,800m gain (Les Houches 1,000m → Summit 4,808m), NOT 1,500m (Gouter Hut to summit)
-- Denali: 4,000m+ gain (basecamp to summit), NOT just high camp to summit
+WRONG: "1,200m gain" (this is only Hörnlihütte to summit)
+RIGHT: "2,850m gain | Max: 4,478m" (this is Zermatt to summit, the full trip)
 
-Format: "2,850m gain | Max: 4,478m"
+The user starts in town, not at a mountain hut. Calculate accordingly.
+
+## EXAMPLE OUTPUT
+
+For "Matterhorn" search, return:
+```json
+[
+  {
+    "name": "Matterhorn via Hörnli Ridge",
+    "location": "Zermatt, Switzerland",
+    "difficulty": "technical",
+    "duration": "2 days",
+    "distance": "12km",
+    "terrain": "Mixed rock and ice climbing with high exposure",
+    "elevation": "2,850m gain | Max: 4,478m",
+    "hazards": "Rockfall, altitude sickness, extreme weather, crevasses on descent",
+    "summary": "Classic alpine climb from Zermatt via the Hörnlihütte to the iconic pyramid summit."
+  }
+]
+```
+
+Note: Elevation is 2,850m because Day 1 (Zermatt 1,620m → Hörnlihütte 3,260m) = 1,640m + Day 2 (Hut → Summit 4,478m) = 1,218m.
 
 ## RULES
 
