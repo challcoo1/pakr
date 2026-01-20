@@ -1713,6 +1713,133 @@ p, .description, .field-note {
   background: rgba(255,255,255,0.05);
 }
 
+/* Destination Ticker */
+.destination-ticker {
+  width: 100%;
+  height: calc(100vh - 200px);
+  min-height: 300px;
+  max-height: 500px;
+  overflow: hidden;
+  position: relative;
+  margin-top: 1rem;
+}
+
+.destination-ticker-label {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+  text-align: center;
+}
+
+.destination-ticker-track {
+  height: calc(100% - 2rem);
+  overflow: hidden;
+  position: relative;
+  mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
+}
+
+.destination-ticker-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  animation: ticker-scroll 30s linear infinite;
+}
+
+@keyframes ticker-scroll {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-50%);
+  }
+}
+
+.destination-ticker-scroll:hover {
+  animation-play-state: paused;
+}
+
+.destination-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  background: white;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  width: 100%;
+}
+
+.destination-card:hover {
+  border-color: var(--burnt);
+  transform: translateX(4px);
+}
+
+.destination-card-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.destination-name {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--charcoal);
+}
+
+.destination-country {
+  font-family: var(--font-serif);
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.destination-weather {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.125rem;
+}
+
+.destination-temp {
+  font-family: var(--font-sans);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--charcoal);
+}
+
+.destination-condition {
+  font-family: var(--font-serif);
+  font-size: 0.6875rem;
+  color: var(--muted);
+}
+
+.destination-loading {
+  color: var(--muted);
+}
+
+/* Dark mode ticker */
+:root.dark .destination-card {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.1);
+}
+
+:root.dark .destination-card:hover {
+  border-color: var(--burnt);
+}
+
+:root.dark .destination-name,
+:root.dark .destination-temp {
+  color: #f5f1e8;
+}
+
 /* Pack Summary */
 .pack-summary {
   background: white;

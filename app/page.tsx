@@ -6,6 +6,7 @@ import AnimatedLogo from '@/components/AnimatedLogo';
 import { BackpackIcon, MountainIcon } from '@/components/NavIcons';
 import WeatherWidget from '@/components/WeatherWidget';
 import PackSummary from '@/components/PackSummary';
+import DestinationTicker from '@/components/DestinationTicker';
 
 interface GearRequirement {
   item: string;
@@ -1454,9 +1455,11 @@ export default function Home() {
         )}
 
         {!trip && !isLoading && !showTripResults && !showConfirm && (
-          <div className="text-center py-12 text-muted">
-            Enter your destination above to get started
-          </div>
+          <DestinationTicker
+            onSelectDestination={(dest) => {
+              setObjective(dest);
+            }}
+          />
         )}
         </main>
       </div>
