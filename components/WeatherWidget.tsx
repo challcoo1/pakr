@@ -58,6 +58,11 @@ interface WeatherWidgetProps {
     days?: WeatherDay[];
     distribution?: WeatherDistribution;
     elevationBands?: ElevationBand[];
+    elevationRange?: {
+      gain: number;
+      maxAltitude: number | null;
+      summitTemp: number;
+    };
     source?: 'mountain-forecast' | 'open-meteo';
     warnings?: string[];
     recommendations?: string[];
@@ -252,12 +257,14 @@ export default function WeatherWidget({ weather, elevation, loading }: WeatherWi
     });
   }
 
-  // Get summit temp for compact display
-  const summitTemp = hasMountainData && weather.elevationBands
-    ? weather.elevationBands[0]?.tempHigh
-    : elevationWeather.length > 0
-    ? elevationWeather[elevationWeather.length - 1]?.tempHigh
-    : null;
+  // Get summit temp for compact display (prefer API-calculated, then Mountain-Forecast, then local calc)
+  const summitTemp = weather.elevationRange?.summitTemp
+    ?? (hasMountainData && weather.elevationBands ? weather.elevationBands[0]?.tempHigh : null)
+    ?? (elevationWeather.length > 0 ? elevationWeather[elevationWeather.length - 1]?.tempHigh : null);
+
+  // Check for significant base-to-summit temperature difference
+  const hasSignificantElevationDiff = weather.elevationRange &&
+    (weather.tempHigh - weather.elevationRange.summitTemp) >= 10;
 
   return (
     <div className="weather-section">
@@ -277,8 +284,8 @@ export default function WeatherWidget({ weather, elevation, loading }: WeatherWi
           </span>
           <span className="weather-compact-desc">{weather.description}</span>
           {summitTemp !== null && (
-            <span className="weather-compact-summit">
-              Summit: {summitTemp}°
+            <span className={`weather-compact-summit ${hasSignificantElevationDiff ? 'weather-summit-warning' : ''}`}>
+              {hasSignificantElevationDiff ? '⚠ ' : ''}Summit: {summitTemp}°
             </span>
           )}
         </div>

@@ -48,6 +48,12 @@ interface WeatherData {
     freezingLevel: number;
     conditions: string;
   }[];
+  // Calculated elevation range info
+  elevationRange?: {
+    gain: number;
+    maxAltitude: number | null;
+    summitTemp: number;
+  };
   source?: 'mountain-forecast' | 'open-meteo';
 }
 
@@ -211,6 +217,96 @@ function getConditionsFromTemp(temp: number, hasSnow: boolean): string {
 
   if (hasSnow && temp <= 2) cond += ', snow';
   return cond;
+}
+
+// Temperature lapse rate: ~6.5°C per 1000m elevation gain
+const LAPSE_RATE = 6.5;
+
+// Parse elevation string to extract gain and max altitude
+// Examples: "over 2,800m gain | Max: 4,478m", "1,500m - 2,400m", "~1200m gain"
+function parseElevationInfo(elevation: string): { gain: number | null; maxAltitude: number | null; minAltitude: number | null } {
+  const result = { gain: null as number | null, maxAltitude: null as number | null, minAltitude: null as number | null };
+
+  // Try to find max altitude (e.g., "Max: 4,478m" or "summit 4478m")
+  const maxMatch = elevation.match(/(?:max|summit|peak|top)[:\s]*([0-9,]+)\s*m/i);
+  if (maxMatch) {
+    result.maxAltitude = parseInt(maxMatch[1].replace(/,/g, ''));
+  }
+
+  // Try to find elevation gain (e.g., "2,800m gain" or "over 1200m")
+  const gainMatch = elevation.match(/(?:over\s+)?([0-9,]+)\s*m?\s*(?:gain|elevation)/i);
+  if (gainMatch) {
+    result.gain = parseInt(gainMatch[1].replace(/,/g, ''));
+  }
+
+  // Try to find elevation range (e.g., "1,500m - 2,400m")
+  const rangeMatch = elevation.match(/([0-9,]+)\s*m?\s*[-–]\s*([0-9,]+)\s*m/i);
+  if (rangeMatch) {
+    result.minAltitude = parseInt(rangeMatch[1].replace(/,/g, ''));
+    result.maxAltitude = parseInt(rangeMatch[2].replace(/,/g, ''));
+    if (!result.gain) {
+      result.gain = result.maxAltitude - result.minAltitude;
+    }
+  }
+
+  // If we have max but no gain, look for any large number as potential gain
+  if (!result.gain && !rangeMatch) {
+    const numberMatch = elevation.match(/([0-9,]+)\s*m/);
+    if (numberMatch) {
+      const num = parseInt(numberMatch[1].replace(/,/g, ''));
+      // If number is less than 9000, it's probably gain, not altitude
+      if (num < 9000 && !result.maxAltitude) {
+        result.gain = num;
+      }
+    }
+  }
+
+  return result;
+}
+
+// Generate elevation-based weather warnings
+function generateElevationWarnings(
+  baseTemp: number,
+  elevationInfo: { gain: number | null; maxAltitude: number | null },
+  precipitation: number
+): string[] {
+  const warnings: string[] = [];
+
+  if (!elevationInfo.gain || elevationInfo.gain < 500) {
+    return warnings;
+  }
+
+  // Calculate temperature at summit using lapse rate
+  const tempDrop = (elevationInfo.gain / 1000) * LAPSE_RATE;
+  const summitTemp = Math.round(baseTemp - tempDrop);
+
+  // Significant temperature difference warning
+  if (tempDrop >= 10) {
+    warnings.push(`Summit will be ~${Math.round(tempDrop)}°C colder than trailhead (expect ${summitTemp}° vs ${Math.round(baseTemp)}°)`);
+  }
+
+  // Snow/ice at summit while warm at base
+  if (baseTemp >= 15 && summitTemp <= 0) {
+    warnings.push('Shorts weather at base, but freezing with possible snow/ice at summit - pack full alpine kit');
+  } else if (baseTemp >= 10 && summitTemp <= 2) {
+    warnings.push('Mild at trailhead but near-freezing at summit - bring warm layers and wind protection');
+  }
+
+  // High altitude specific warnings
+  if (elevationInfo.maxAltitude && elevationInfo.maxAltitude >= 4000) {
+    warnings.push('High altitude: acclimatization needed, weather can change rapidly');
+  } else if (elevationInfo.maxAltitude && elevationInfo.maxAltitude >= 3000) {
+    warnings.push('Significant altitude: expect stronger winds and UV exposure at summit');
+  }
+
+  // Snow at summit
+  if (summitTemp <= -5 && precipitation >= 30) {
+    warnings.push(`Snow likely at summit (${summitTemp}°) - check conditions and bring traction devices`);
+  } else if (summitTemp <= 0 && precipitation >= 40) {
+    warnings.push('Precipitation may fall as snow above treeline');
+  }
+
+  return warnings;
 }
 
 // Geocode location using OpenStreetMap Nominatim (free, no API key)
@@ -524,7 +620,7 @@ function getMonthFromString(timeOfYear: string): number | null {
 
 export async function POST(request: Request) {
   try {
-    const { location, region, timeOfYear, plannedDate } = await request.json();
+    const { location, region, timeOfYear, plannedDate, elevation } = await request.json();
 
     if (!location && !region) {
       return NextResponse.json({ error: 'Location required' }, { status: 400 });
@@ -586,6 +682,29 @@ export async function POST(request: Request) {
     }
 
     weather.location = searchQuery;
+
+    // Add elevation-based warnings if elevation data provided
+    if (elevation) {
+      const elevationInfo = parseElevationInfo(elevation);
+      if (elevationInfo.gain && elevationInfo.gain >= 500) {
+        const elevationWarnings = generateElevationWarnings(
+          weather.tempHigh,
+          elevationInfo,
+          weather.precipitation
+        );
+
+        if (elevationWarnings.length > 0) {
+          weather.warnings = [...(weather.warnings || []), ...elevationWarnings];
+        }
+
+        // Add elevation info to weather for widget display
+        weather.elevationRange = {
+          gain: elevationInfo.gain,
+          maxAltitude: elevationInfo.maxAltitude,
+          summitTemp: Math.round(weather.tempHigh - (elevationInfo.gain / 1000) * LAPSE_RATE),
+        };
+      }
+    }
 
     return NextResponse.json({ weather });
   } catch (error) {

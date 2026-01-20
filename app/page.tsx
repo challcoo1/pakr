@@ -484,6 +484,7 @@ export default function Home() {
           region: tripData.region,
           timeOfYear: tripData.timeOfYear,
           plannedDate: plannedDate || null,
+          elevation: tripData.elevation,
         }),
       });
       const data = await response.json();

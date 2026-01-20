@@ -1358,6 +1358,12 @@ p, .description, .field-note {
   border-radius: 3px;
 }
 
+.weather-summit-warning {
+  color: var(--terracotta);
+  background: rgba(183, 101, 67, 0.12);
+  font-weight: 600;
+}
+
 .weather-compact-expand {
   font-size: 0.625rem;
   color: var(--muted);
@@ -1692,6 +1698,11 @@ p, .description, .field-note {
 
 :root.dark .weather-compact-summit {
   background: rgba(255,255,255,0.1);
+}
+
+:root.dark .weather-summit-warning {
+  color: #e8a87c;
+  background: rgba(232, 168, 124, 0.15);
 }
 
 :root.dark .weather-expanded {
