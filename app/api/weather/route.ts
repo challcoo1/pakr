@@ -345,7 +345,7 @@ async function getHistoricalAverages(
     const endDate = `${currentYear - 1}-${String(month).padStart(2, '0')}-28`;
 
     const response = await fetch(
-      `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,weathercode&timezone=auto`
+      `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto`
     );
     const data = await response.json();
 
@@ -358,8 +358,12 @@ async function getHistoricalAverages(
         tempHigh: data.daily.temperature_2m_max[i],
         tempLow: data.daily.temperature_2m_min[i],
         precipitation: data.daily.precipitation_sum[i] || 0,
-        snowfall: data.daily.snowfall_sum?.[i] || 0,
-        weatherCode: data.daily.weathercode?.[i] || 0,
+        // Estimate snow based on temperature and precipitation
+        snowfall: (data.daily.temperature_2m_max[i] <= 2 && data.daily.precipitation_sum[i] > 0)
+          ? data.daily.precipitation_sum[i] * 0.5 : 0,
+        // Estimate weather code: clear if no precip, rain/snow otherwise
+        weatherCode: data.daily.precipitation_sum[i] > 1
+          ? (data.daily.temperature_2m_max[i] <= 2 ? 73 : 63) : 0,
       }))
       .filter((d: { month: number; tempHigh: number | null }) => d.month === month && d.tempHigh !== null);
 
@@ -379,7 +383,7 @@ async function getHistoricalAverages(
 
     // Calculate enhanced stats
     const totalDays = monthDays.length;
-    const yearsOfData = Math.round(totalDays / 30); // Approximate
+    const yearsOfData = Math.max(1, Math.round(totalDays / 30)); // Approximate, minimum 1 to avoid division by zero
     const rainyDays = Math.round(monthDays.filter((d: { precipitation: number }) => d.precipitation > 1).length / yearsOfData);
     const snowDays = Math.round(monthDays.filter((d: { snowfall: number }) => d.snowfall > 0).length / yearsOfData);
     const sunnyDays = Math.round(monthDays.filter((d: { weatherCode: number }) => d.weatherCode <= 3).length / yearsOfData);
