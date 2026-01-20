@@ -19,14 +19,24 @@ Return matching trips as JSON array:
     "location": "[region, country]",
     "difficulty": "[easy|moderate|hard|technical]",
     "duration": "[X hours or X days]",
-    "distance": "[Xkm]",
+    "distance": "[total km for full trip]",
     "terrain": "[description]",
-    "elevation": "[TOTAL elevation gain for full trip, plus max altitude. For multi-day climbs: include gain from basecamp/town to summit, not just final day]",
+    "elevation": "[Xm gain | Max: Ym] - MUST be total gain from town/trailhead to summit",
     "hazards": "[key hazards]",
     "summary": "[one sentence description]"
   }
 ]
 ```
+
+## CRITICAL: ELEVATION CALCULATION
+
+**DO NOT give only the summit day elevation.** For multi-day trips, elevation MUST include ALL days:
+
+- Matterhorn via Hörnli: 2,850m gain (Zermatt 1,620m → Summit 4,478m), NOT 1,200m (hut to summit only)
+- Mont Blanc via Gouter: 3,800m gain (Les Houches 1,000m → Summit 4,808m), NOT 1,500m (Gouter Hut to summit)
+- Denali: 4,000m+ gain (basecamp to summit), NOT just high camp to summit
+
+Format: "2,850m gain | Max: 4,478m"
 
 ## RULES
 
@@ -35,4 +45,4 @@ Return matching trips as JSON array:
 3. **Include hazards** - This drives gear requirements.
 4. **Seasonal awareness** - Note if conditions vary by season.
 5. **Multiple matches** - If query is ambiguous, return all matching trails.
-6. **Total elevation for multi-day** - For trips spanning multiple days, elevation must be the TOTAL gain from starting point (town/trailhead) to highest point, not just the final summit push. Example: Matterhorn from Zermatt = ~2,800m gain total, not 1,200m (which is just hut to summit).
+6. **ELEVATION = FULL TRIP** - Never give partial elevation. A 2-day climb starts from the town, not the hut.
