@@ -471,13 +471,15 @@ export default function GearPage() {
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      const newSet = new Set(expandedItems);
-                                      if (isExpanded) {
-                                        newSet.delete(item.id);
-                                      } else {
-                                        newSet.add(item.id);
-                                      }
-                                      setExpandedItems(newSet);
+                                      setExpandedItems(prev => {
+                                        const newSet = new Set(prev);
+                                        if (newSet.has(item.id)) {
+                                          newSet.delete(item.id);
+                                        } else {
+                                          newSet.add(item.id);
+                                        }
+                                        return newSet;
+                                      });
                                     }}
                                     className="text-xs link hover:underline flex items-center gap-1"
                                   >
