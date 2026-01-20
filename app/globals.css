@@ -1713,41 +1713,42 @@ p, .description, .field-note {
   background: rgba(255,255,255,0.05);
 }
 
-/* Destination Ticker */
+/* Destination Ticker - Field Journal Style */
 .destination-ticker {
   width: 100%;
-  height: calc(100vh - 200px);
-  min-height: 300px;
-  max-height: 500px;
+  height: calc(100vh - 220px);
+  min-height: 280px;
+  max-height: 480px;
   overflow: hidden;
   position: relative;
-  margin-top: 1rem;
+  margin-top: 1.5rem;
 }
 
 .destination-ticker-label {
   font-family: var(--font-sans);
   font-size: 0.6875rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   color: var(--muted);
-  margin-bottom: 0.75rem;
-  text-align: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(43, 43, 43, 0.12);
 }
 
 .destination-ticker-track {
-  height: calc(100% - 2rem);
+  height: calc(100% - 2.5rem);
   overflow: hidden;
   position: relative;
-  mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
-  -webkit-mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, black 8%, black 92%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black 8%, black 92%, transparent);
 }
 
 .destination-ticker-scroll {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  animation: ticker-scroll 30s linear infinite;
+  gap: 0;
+  animation: ticker-scroll 35s linear infinite;
 }
 
 @keyframes ticker-scroll {
@@ -1767,19 +1768,19 @@ p, .description, .field-note {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.25rem;
-  background: white;
-  border: 1px solid rgba(0,0,0,0.08);
-  border-radius: 8px;
+  padding: 0.875rem 1rem;
+  background: transparent;
+  border-left: 3px solid transparent;
+  border-bottom: 1px solid rgba(43, 43, 43, 0.08);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   text-align: left;
   width: 100%;
 }
 
 .destination-card:hover {
-  border-color: var(--burnt);
-  transform: translateX(4px);
+  background: rgba(43, 43, 43, 0.03);
+  border-left-color: var(--burnt);
 }
 
 .destination-card-main {
@@ -1790,49 +1791,55 @@ p, .description, .field-note {
 
 .destination-name {
   font-family: var(--font-sans);
-  font-size: 1rem;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--charcoal);
 }
 
 .destination-country {
   font-family: var(--font-serif);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--muted);
+  font-style: italic;
 }
 
 .destination-weather {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.125rem;
+  align-items: baseline;
+  gap: 0.5rem;
 }
 
 .destination-temp {
   font-family: var(--font-sans);
-  font-size: 1.25rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--charcoal);
 }
 
 .destination-condition {
   font-family: var(--font-serif);
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   color: var(--muted);
 }
 
 .destination-loading {
+  font-family: var(--font-serif);
+  font-size: 0.75rem;
   color: var(--muted);
+  font-style: italic;
 }
 
 /* Dark mode ticker */
+:root.dark .destination-ticker-label {
+  border-bottom-color: rgba(255,255,255,0.1);
+}
+
 :root.dark .destination-card {
-  background: rgba(255,255,255,0.05);
-  border-color: rgba(255,255,255,0.1);
+  border-bottom-color: rgba(255,255,255,0.06);
 }
 
 :root.dark .destination-card:hover {
-  border-color: var(--burnt);
+  background: rgba(255,255,255,0.03);
 }
 
 :root.dark .destination-name,
