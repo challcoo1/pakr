@@ -5,34 +5,25 @@ import OpenAI from 'openai';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-// Load the trip analysis skill
-function loadTripAnalysisSkill(): string {
+// Load skills
+function loadSkill(name: string): string {
   try {
-    const skillPath = join(process.cwd(), 'skills', 'trip-analysis', 'SKILL.md');
+    const skillPath = join(process.cwd(), 'skills', name, 'SKILL.md');
     return readFileSync(skillPath, 'utf-8');
   } catch {
     return '';
   }
 }
 
-const TRIP_ANALYSIS_SKILL = loadTripAnalysisSkill();
+const CHAT_SKILL = loadSkill('chat');
+const TRIP_ANALYSIS_SKILL = loadSkill('trip-analysis');
 
-const SYSTEM_PROMPT = `You are pakr88, a gear gap analyzer for serious outdoor people.
+// Combine chat persona with trip analysis capability
+const SYSTEM_PROMPT = `${CHAT_SKILL}
 
-You have access to this trip analysis skill:
+## TRIP ANALYSIS SKILL
 
 ${TRIP_ANALYSIS_SKILL}
-
-BEHAVIOR:
-1. When user describes a trip/objective: Run the trip analysis skill and return the JSON output
-2. When user says they have gear: Ask "What [item]?" to get specifics
-3. When user provides gear details: Confirm, then show remaining gaps from the current trip requirements
-
-OUTPUT FORMAT:
-- For trip analysis: Return valid JSON matching the skill output schema
-- For gear questions: Short, direct text
-- No enthusiasm. No "That sounds amazing!"
-- Treat users like competent adults.
 
 CRITICAL: When analyzing a trip, you MUST output valid JSON matching the skill schema. Start with { and end with }. No markdown code fences.`;
 

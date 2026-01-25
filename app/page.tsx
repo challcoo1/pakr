@@ -48,8 +48,18 @@ interface TripAnalysis {
 interface UserGearEntry {
   input: string;
   status: 'ideal' | 'suitable' | 'adequate' | 'unsuitable' | 'empty';
+  matchLevel?: 'excellent' | 'good' | 'adequate' | 'poor';
   reasons: string[];
   weightG?: number | null;
+  specs?: string;
+}
+
+interface SystemCheck {
+  systemScore: number;
+  systemLevel: 'excellent' | 'good' | 'fair' | 'poor';
+  summary: string;
+  compatibilityNotes: { items: string[]; status: string; note: string }[];
+  warnings: { items: string[]; issue: string; suggestion: string }[];
 }
 
 interface ProductMatch {
@@ -213,6 +223,8 @@ export default function Home() {
 
   // Gear matching (runs in background after trip loads)
   const [isMatchingGear, setIsMatchingGear] = useState(false);
+  const [systemCheck, setSystemCheck] = useState<SystemCheck | null>(null);
+  const [isCheckingSystem, setIsCheckingSystem] = useState(false);
 
   // Ignored gear (persisted in localStorage)
   const [ignoredGear, setIgnoredGear] = useState<Set<string>>(new Set());
@@ -444,18 +456,59 @@ export default function Home() {
               if (optimizeData.matches) {
                 // Pre-populate matched gear
                 const populated: Record<string, UserGearEntry> = { ...initial };
+                const matchedGearForSystemCheck: { requirement: string; name: string; specs?: string }[] = [];
+
                 for (const [itemName, match] of Object.entries(optimizeData.matches)) {
                   if (match && typeof match === 'object' && 'name' in match) {
-                    const m = match as { name: string; score: number; reason: string; weightG?: number | null };
+                    const m = match as { name: string; score: number; matchLevel?: string; reason: string; specs?: string; weightG?: number | null };
+                    // Convert matchLevel to status for validation display
+                    const statusMap: Record<string, 'ideal' | 'suitable' | 'adequate'> = {
+                      excellent: 'ideal',
+                      good: 'suitable',
+                      adequate: 'adequate',
+                      poor: 'adequate',
+                    };
                     populated[itemName] = {
                       input: m.name,
-                      status: m.score >= 80 ? 'ideal' : m.score >= 60 ? 'suitable' : 'adequate',
+                      status: statusMap[m.matchLevel || 'adequate'] || 'adequate',
+                      matchLevel: (m.matchLevel as 'excellent' | 'good' | 'adequate' | 'poor') || 'adequate',
                       reasons: [m.reason],
+                      specs: m.specs,
                       weightG: m.weightG,
                     };
+                    matchedGearForSystemCheck.push({
+                      requirement: itemName,
+                      name: m.name,
+                      specs: m.specs,
+                    });
                   }
                 }
                 setUserGear(populated);
+
+                // Run system compatibility check (phase 2)
+                if (matchedGearForSystemCheck.length > 0) {
+                  setIsCheckingSystem(true);
+                  fetch('/api/system-check', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      matchedGear: matchedGearForSystemCheck,
+                      trip: {
+                        name: analyzeData.trip.name,
+                        terrain: analyzeData.trip.terrain,
+                        conditions: analyzeData.trip.conditions,
+                      },
+                    }),
+                  })
+                    .then(res => res.json())
+                    .then(systemData => {
+                      if (systemData.systemScore !== undefined) {
+                        setSystemCheck(systemData);
+                      }
+                    })
+                    .catch(err => console.error('System check failed:', err))
+                    .finally(() => setIsCheckingSystem(false));
+                }
               }
             })
             .catch(err => {
@@ -1237,11 +1290,15 @@ export default function Home() {
                         </div>
                         {entry.reasons.length > 0 && (
                           <div className={`gear-box-result-status ${entry.status}`}>
-                            {entry.status === 'ideal' && 'IDEAL'}
-                            {entry.status === 'suitable' && 'SUITABLE'}
-                            {entry.status === 'adequate' && 'MARGINAL'}
-                            {entry.status === 'unsuitable' && 'UNSUITABLE'}
-                            {' - '}{entry.reasons[0]}
+                            {entry.matchLevel === 'excellent' && 'Excellent match'}
+                            {entry.matchLevel === 'good' && 'Good match'}
+                            {entry.matchLevel === 'adequate' && 'Adequate'}
+                            {entry.matchLevel === 'poor' && 'Consider alternatives'}
+                            {!entry.matchLevel && entry.status === 'ideal' && 'IDEAL'}
+                            {!entry.matchLevel && entry.status === 'suitable' && 'SUITABLE'}
+                            {!entry.matchLevel && entry.status === 'adequate' && 'MARGINAL'}
+                            {!entry.matchLevel && entry.status === 'unsuitable' && 'UNSUITABLE'}
+                            {' — '}{entry.reasons[0]}
                           </div>
                         )}
                         <div className="gear-box-actions">
@@ -1398,6 +1455,52 @@ export default function Home() {
                 </div>
               ))}
             </div>
+
+            {/* System Compatibility Check */}
+            {(isCheckingSystem || systemCheck) && (
+              <div className="system-check">
+                {isCheckingSystem && !systemCheck && (
+                  <div className="system-check-loading">
+                    <span className="inline-block w-3 h-3 border-2 border-muted border-t-burnt rounded-full animate-spin" />
+                    Checking gear compatibility...
+                  </div>
+                )}
+                {systemCheck && (
+                  <>
+                    <div className="system-check-header">
+                      <span className={`system-check-level system-check-${systemCheck.systemLevel}`}>
+                        {systemCheck.systemLevel === 'excellent' && 'Excellent system'}
+                        {systemCheck.systemLevel === 'good' && 'Good system'}
+                        {systemCheck.systemLevel === 'fair' && 'Fair system'}
+                        {systemCheck.systemLevel === 'poor' && 'System issues'}
+                      </span>
+                      <span className="system-check-summary">{systemCheck.summary}</span>
+                    </div>
+                    {systemCheck.compatibilityNotes.length > 0 && (
+                      <div className="system-check-notes">
+                        {systemCheck.compatibilityNotes.map((note, idx) => (
+                          <div key={idx} className={`system-check-note system-check-note-${note.status}`}>
+                            <span className="system-check-note-items">{note.items.join(' + ')}</span>
+                            <span className="system-check-note-text">{note.note}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {systemCheck.warnings.length > 0 && (
+                      <div className="system-check-warnings">
+                        {systemCheck.warnings.map((warning, idx) => (
+                          <div key={idx} className="system-check-warning">
+                            <div className="system-check-warning-items">{warning.items.join(' + ')}</div>
+                            <div className="system-check-warning-issue">{warning.issue}</div>
+                            <div className="system-check-warning-suggestion">{warning.suggestion}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Add from My Gear */}
             {session && (

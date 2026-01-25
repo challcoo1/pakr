@@ -5,10 +5,20 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { sql } from '@/lib/db';
 import OpenAI from 'openai';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
+
+// Load the gear matching skill
+function loadSkill(): string {
+  const skillPath = join(process.cwd(), 'skills', 'gear-matching', 'SKILL.md');
+  return readFileSync(skillPath, 'utf-8');
+}
+
+const GEAR_MATCHING_SKILL = loadSkill();
 
 interface GearRequirement {
   item: string;
@@ -99,84 +109,75 @@ export async function POST(request: Request) {
   }
 }
 
+// Convert score to match level
+function getMatchLevel(score: number): 'excellent' | 'good' | 'adequate' | 'poor' {
+  if (score >= 90) return 'excellent';
+  if (score >= 70) return 'good';
+  if (score >= 50) return 'adequate';
+  return 'poor';
+}
+
 async function matchGearToRequirements(
   requirements: GearRequirement[],
   userGear: UserGear[],
   tripContext: TripContext
-): Promise<Record<string, { gearId: string; name: string; score: number; reason: string; weightG?: number | null } | null>> {
+): Promise<Record<string, { gearId: string; name: string; score: number; matchLevel: string; reason: string; specs?: string; weightG?: number | null } | null>> {
 
-  const prompt = `You are a gear optimization expert. Match the user's gear to trip requirements.
-
-TRIP: ${tripContext.name} (${tripContext.region})
-Duration: ${tripContext.duration}
-Terrain: ${tripContext.terrain}
-Hazards: ${tripContext.hazards}
-Conditions: ${tripContext.conditions?.join(', ') || 'varied'}
-
-USER'S GEAR:
-${userGear.map((g, i) => `${i + 1}. [${g.id}] ${g.name} - ${g.specs} (category: ${g.category})`).join('\n')}
-
-REQUIREMENTS:
-${requirements.map((r, i) => `${i + 1}. ${r.item}: ${r.specs} (${r.priority})`).join('\n')}
-
-For each requirement, select the BEST matching gear from the user's collection.
-Consider:
-1. Specs match (weight, warmth, waterproofing, features)
-2. Category match (footwear->footwear, etc.)
-3. COMPATIBILITY between items:
-   - Crampons must match boot type (automatic/semi-auto/strap-on with boot compatibility)
-   - Rope diameter affects belay device compatibility
-   - Layering systems should work together (no redundant insulation)
-   - Ice axe length for user height/terrain
-4. Trip conditions (don't over/under spec)
-
-Return JSON:
-{
-  "[requirement item name]": {
-    "gearId": "[user gear id]",
-    "name": "[gear name]",
-    "score": [1-100],
-    "reason": "[brief explanation]"
-  },
-  ...
-}
-
-If no suitable match exists for a requirement, use null.
-Only return the JSON object, no other text.`;
+  const input = {
+    trip: {
+      name: tripContext.name,
+      region: tripContext.region,
+      duration: tripContext.duration,
+      terrain: tripContext.terrain,
+      hazards: tripContext.hazards,
+      conditions: tripContext.conditions || []
+    },
+    userGear: userGear.map(g => ({
+      id: g.id,
+      name: g.name,
+      specs: g.specs,
+      category: g.category
+    })),
+    requirements: requirements.map(r => ({
+      item: r.item,
+      specs: r.specs,
+      priority: r.priority
+    }))
+  };
 
   try {
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
-      messages: [{ role: 'user', content: prompt }],
+      messages: [
+        { role: 'system', content: GEAR_MATCHING_SKILL },
+        { role: 'user', content: JSON.stringify(input) }
+      ],
       temperature: 0.3,
+      response_format: { type: 'json_object' },
       max_tokens: 2000,
     });
 
     const content = response.choices[0]?.message?.content || '';
+    const aiMatches = JSON.parse(content);
 
-    // Extract JSON
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const aiMatches = JSON.parse(jsonMatch[0]);
-
-      // Enrich matches with weightG from user gear
-      const enrichedMatches: Record<string, { gearId: string; name: string; score: number; reason: string; weightG?: number | null } | null> = {};
-      for (const [reqItem, match] of Object.entries(aiMatches)) {
-        if (match && typeof match === 'object' && 'gearId' in match) {
-          const m = match as { gearId: string; name: string; score: number; reason: string };
-          const gear = userGear.find(g => g.id === m.gearId);
-          enrichedMatches[reqItem] = {
-            ...m,
-            weightG: gear?.weightG || null,
-          };
-        } else {
-          enrichedMatches[reqItem] = null;
-        }
+    // Enrich matches with weightG and ensure matchLevel
+    const enrichedMatches: Record<string, { gearId: string; name: string; score: number; matchLevel: string; reason: string; specs?: string; weightG?: number | null } | null> = {};
+    for (const [reqItem, match] of Object.entries(aiMatches)) {
+      if (match && typeof match === 'object' && 'gearId' in match) {
+        const m = match as { gearId: string; name: string; score: number; matchLevel?: string; reason: string };
+        const gear = userGear.find(g => g.id === m.gearId);
+        enrichedMatches[reqItem] = {
+          ...m,
+          matchLevel: m.matchLevel || getMatchLevel(m.score),
+          specs: gear?.specs ? formatSpecs(gear.specs) : undefined,
+          weightG: gear?.weightG || null,
+        };
+      } else {
+        enrichedMatches[reqItem] = null;
       }
-      return enrichedMatches;
     }
+    return enrichedMatches;
 
-    return {};
   } catch (error) {
     console.error('AI matching error:', error);
     return {};

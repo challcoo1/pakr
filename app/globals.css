@@ -623,6 +623,136 @@ p, .description, .field-note {
   cursor: not-allowed;
 }
 
+/* System Compatibility Check */
+.system-check {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 4px;
+  border-left: 3px solid var(--sage);
+}
+
+.system-check-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.system-check-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.system-check-level {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.25rem 0.5rem;
+  border-radius: 2px;
+}
+
+.system-check-excellent {
+  background: var(--forest);
+  color: white;
+}
+
+.system-check-good {
+  background: var(--sage);
+  color: white;
+}
+
+.system-check-fair {
+  background: var(--terracotta);
+  color: white;
+}
+
+.system-check-poor {
+  background: #c44;
+  color: white;
+}
+
+.system-check-summary {
+  font-family: var(--font-serif);
+  font-size: 0.9375rem;
+  color: var(--charcoal);
+}
+
+.system-check-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.system-check-note {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  padding: 0.375rem 0;
+}
+
+.system-check-note-items {
+  font-weight: 600;
+  color: var(--charcoal);
+}
+
+.system-check-note-text {
+  color: var(--muted);
+}
+
+.system-check-note-compatible::before {
+  content: '✓';
+  color: var(--forest);
+  margin-right: 0.25rem;
+}
+
+.system-check-note-incompatible::before {
+  content: '✗';
+  color: #c44;
+  margin-right: 0.25rem;
+}
+
+.system-check-warnings {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.system-check-warning {
+  padding: 0.625rem 0.75rem;
+  background: rgba(204, 68, 68, 0.06);
+  border-left: 3px solid var(--terracotta);
+  border-radius: 3px;
+}
+
+.system-check-warning-items {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--charcoal);
+  margin-bottom: 0.25rem;
+}
+
+.system-check-warning-issue {
+  font-size: 0.8125rem;
+  color: var(--charcoal);
+}
+
+.system-check-warning-suggestion {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-style: italic;
+  margin-top: 0.25rem;
+}
+
 /* Recommendation styles */
 .gear-rec-top {
   padding: 1rem;
