@@ -2,6 +2,16 @@
 
 import { NextResponse } from 'next/server';
 
+// Normalize a gear name for matching to prevent duplicates
+function normalizeName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[''`]/g, '')        // Remove apostrophes
+    .replace(/[^a-z0-9\s]/g, ' ') // Replace other punctuation with space
+    .replace(/\s+/g, ' ')         // Collapse multiple spaces
+    .trim();
+}
+
 async function getDb() {
   const { sql } = await import('@/lib/db');
   return sql;
@@ -150,9 +160,10 @@ export async function POST(request: Request) {
 
         // Also add owned gear to user's portfolio
         if (g.isOwned && g.name) {
-          // Find or create in gear_catalog
+          // Find or create in gear_catalog using normalized name
+          const normalizedGearName = normalizeName(g.name);
           let catalogResult = await sql`
-            SELECT id FROM gear_catalog WHERE LOWER(name) = ${g.name.toLowerCase()} LIMIT 1
+            SELECT id FROM gear_catalog WHERE normalized_name = ${normalizedGearName} LIMIT 1
           `;
 
           let catalogId;
@@ -160,8 +171,8 @@ export async function POST(request: Request) {
             catalogId = catalogResult[0].id;
           } else {
             const newCatalog = await sql`
-              INSERT INTO gear_catalog (name, category)
-              VALUES (${g.name}, ${g.category || null})
+              INSERT INTO gear_catalog (name, normalized_name, category)
+              VALUES (${g.name}, ${normalizedGearName}, ${g.category || null})
               RETURNING id
             `;
             catalogId = newCatalog[0].id;

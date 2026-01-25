@@ -373,9 +373,16 @@ function getWeatherCondition(code: number): string {
   return 'Unknown';
 }
 
+// Warning structure
+interface Warning {
+  severity: 'critical' | 'high' | 'moderate';
+  message: string;
+  action: string;
+}
+
 // Generate warnings based on weather codes and conditions
-function generateWarnings(days: WeatherDay[]): string[] {
-  const warnings: string[] = [];
+function generateWarnings(days: WeatherDay[]): Warning[] {
+  const warnings: Warning[] = [];
 
   const hasThunderstorm = days.some(d => d.weatherCode && d.weatherCode >= 95);
   const hasHeavyRain = days.some(d => d.precipitation >= 70);
@@ -384,12 +391,48 @@ function generateWarnings(days: WeatherDay[]): string[] {
   const hasHeat = days.some(d => d.tempHigh >= 30);
   const consecutiveRain = days.filter(d => d.precipitation >= 50).length >= 3;
 
-  if (hasThunderstorm) warnings.push('Thunderstorms expected - avoid exposed ridges');
-  if (hasHeavyRain) warnings.push('Heavy rain likely - waterproof gear essential');
-  if (hasSnow) warnings.push('Snow expected - check conditions and bring traction');
-  if (hasFreezing) warnings.push('Below freezing overnight - pack warm layers');
-  if (hasHeat) warnings.push('High temperatures - carry extra water');
-  if (consecutiveRain) warnings.push('Extended wet period - plan for mud and river crossings');
+  if (hasThunderstorm) {
+    warnings.push({
+      severity: 'critical',
+      message: 'Thunderstorms expected',
+      action: 'Avoid exposed ridges and summits during peak hours'
+    });
+  }
+  if (hasHeavyRain) {
+    warnings.push({
+      severity: 'high',
+      message: 'Heavy rain likely',
+      action: 'Pack full waterproof gear and consider river crossing safety'
+    });
+  }
+  if (hasSnow) {
+    warnings.push({
+      severity: 'high',
+      message: 'Snow expected',
+      action: 'Check conditions and bring traction devices'
+    });
+  }
+  if (hasFreezing) {
+    warnings.push({
+      severity: 'moderate',
+      message: 'Below freezing overnight',
+      action: 'Pack warm layers and check for ice on trails'
+    });
+  }
+  if (hasHeat) {
+    warnings.push({
+      severity: 'moderate',
+      message: 'High temperatures expected',
+      action: 'Carry extra water and start early'
+    });
+  }
+  if (consecutiveRain) {
+    warnings.push({
+      severity: 'moderate',
+      message: 'Extended wet period',
+      action: 'Plan for muddy trails and swollen river crossings'
+    });
+  }
 
   return warnings;
 }
@@ -788,7 +831,7 @@ export async function POST(request: Request) {
         if (llmResult) {
           weather.warnings = llmResult.warnings;
           weather.recommendations = llmResult.recommendations;
-          weather.layering = llmResult.layering;
+          weather.layering = llmResult.layering || undefined;
           if (llmResult.summitWeather) {
             weather.elevationRange.summitTemp = llmResult.summitWeather.tempHigh;
           }

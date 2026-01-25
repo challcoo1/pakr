@@ -7,6 +7,16 @@ import { join } from 'path';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+// Normalize a gear name for matching to prevent duplicates
+function normalizeName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[''`]/g, '')        // Remove apostrophes
+    .replace(/[^a-z0-9\s]/g, ' ') // Replace other punctuation with space
+    .replace(/\s+/g, ' ')         // Collapse multiple spaces
+    .trim();
+}
+
 function loadSkill(): string {
   try {
     return readFileSync(join(process.cwd(), 'skills', 'gear-search', 'SKILL.md'), 'utf-8');
@@ -61,25 +71,37 @@ async function getAuth() {
   return auth;
 }
 
-// GET - fetch user's gear portfolio
-export async function GET() {
+// GET - fetch user's gear portfolio with pagination
+export async function GET(request: Request) {
   try {
     const sql = await getDb();
     const auth = await getAuth();
     const session = await auth();
 
     if (!session?.user?.email) {
-      return NextResponse.json({ gear: [] });
+      return NextResponse.json({ gear: [], total: 0, page: 1, limit: 50 });
     }
+
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)));
+    const offset = (page - 1) * limit;
 
     const userResult = await sql`
       SELECT id FROM users WHERE email = ${session.user.email}
     `;
     if (!userResult[0]) {
-      return NextResponse.json({ gear: [] });
+      return NextResponse.json({ gear: [], total: 0, page, limit });
     }
     const userId = userResult[0].id;
 
+    // Get total count for pagination
+    const countResult = await sql`
+      SELECT COUNT(*) as total FROM user_gear WHERE user_id = ${userId}
+    `;
+    const total = parseInt(countResult[0]?.total || '0', 10);
+
+    // Single query with LEFT JOIN to get gear and user reviews together
     const gear = await sql`
       SELECT
         ug.id,
@@ -98,23 +120,19 @@ export async function GET() {
         gc.description,
         gc.product_url,
         gc.reviews,
-        gc.specs
+        gc.specs,
+        gr.rating as user_rating,
+        gr.title as user_review_title,
+        gr.review as user_review_text,
+        gr.conditions as user_review_conditions,
+        gr.created_at as user_review_date
       FROM user_gear ug
       JOIN gear_catalog gc ON ug.gear_id = gc.id
+      LEFT JOIN gear_reviews gr ON gr.gear_id = gc.id AND gr.user_id = ${userId}
       WHERE ug.user_id = ${userId}
       ORDER BY ug.created_at DESC
+      LIMIT ${limit} OFFSET ${offset}
     `;
-
-    // Get user's reviews for their gear
-    const userReviews = await sql`
-      SELECT gr.gear_id, gr.rating, gr.title, gr.review, gr.conditions, gr.created_at
-      FROM gear_reviews gr
-      WHERE gr.user_id = ${userId}
-    `;
-    const reviewsByGearId = userReviews.reduce((acc: any, r: any) => {
-      acc[r.gear_id] = r;
-      return acc;
-    }, {});
 
     return NextResponse.json({
       gear: gear.map((g: any) => ({
@@ -132,12 +150,23 @@ export async function GET() {
         specs: formatSpecs(g.specs),
         notes: g.notes,
         addedAt: g.added_at,
-        userReview: reviewsByGearId[g.gear_catalog_id] || null,
+        userReview: g.user_rating ? {
+          gear_id: g.gear_catalog_id,
+          rating: g.user_rating,
+          title: g.user_review_title,
+          review: g.user_review_text,
+          conditions: g.user_review_conditions,
+          created_at: g.user_review_date,
+        } : null,
       })),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
     });
   } catch (error) {
     console.error('Error fetching user gear:', error);
-    return NextResponse.json({ gear: [], error: String(error) });
+    return NextResponse.json({ gear: [], total: 0, page: 1, limit: 50, totalPages: 0, error: String(error) });
   }
 }
 
@@ -182,9 +211,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Name and category required' }, { status: 400 });
     }
 
-    // Find or create gear in catalog
+    const normalizedName = normalizeName(name);
+
+    // Find or create gear in catalog using normalized name for deduplication
     let gearResult = await sql`
-      SELECT id FROM gear_catalog WHERE name = ${name} LIMIT 1
+      SELECT id FROM gear_catalog WHERE normalized_name = ${normalizedName} LIMIT 1
     `;
 
     let gearId;
@@ -211,8 +242,8 @@ export async function POST(request: Request) {
       }
     } else {
       const newGear = await sql`
-        INSERT INTO gear_catalog (name, manufacturer, category, subcategory, gender, image_url, description, product_url, reviews, specs)
-        VALUES (${name}, ${brand}, ${category}, ${subcategory || null}, ${gender || null}, ${imageUrl || null}, ${description || null}, ${productUrl || null}, ${reviews ? JSON.stringify(reviews) : null}::jsonb, ${JSON.stringify({ raw: specs })})
+        INSERT INTO gear_catalog (name, normalized_name, manufacturer, category, subcategory, gender, image_url, description, product_url, reviews, specs)
+        VALUES (${name}, ${normalizedName}, ${brand}, ${category}, ${subcategory || null}, ${gender || null}, ${imageUrl || null}, ${description || null}, ${productUrl || null}, ${reviews ? JSON.stringify(reviews) : null}::jsonb, ${JSON.stringify({ raw: specs })})
         RETURNING id
       `;
       gearId = newGear[0].id;
