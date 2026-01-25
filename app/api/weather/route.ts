@@ -1,4 +1,19 @@
 import { NextResponse } from 'next/server';
+import OpenAI from 'openai';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY!,
+});
+
+// Load the weather recommendations skill
+function loadSkill(): string {
+  const skillPath = join(process.cwd(), 'skills', 'weather-recommendations', 'SKILL.md');
+  return readFileSync(skillPath, 'utf-8');
+}
+
+const WEATHER_SKILL = loadSkill();
 
 interface WeatherDay {
   date: string;
@@ -18,7 +33,17 @@ interface WeatherData {
   description: string;
   days?: WeatherDay[];
   // Warnings for near-term forecasts
-  warnings?: string[];
+  warnings?: {
+    severity: 'critical' | 'high' | 'moderate';
+    message: string;
+    action: string;
+  }[];
+  // Layering strategy for elevation changes
+  layering?: {
+    base: string;
+    summit: string;
+    strategy: string;
+  };
   // Historical distribution data for bell curve visualization
   distribution?: {
     month: string;
@@ -618,6 +643,65 @@ function getMonthFromString(timeOfYear: string): number | null {
   return null;
 }
 
+// Generate LLM-powered weather recommendations using the skill
+async function generateWeatherRecommendations(
+  weather: WeatherData,
+  elevationInfo: { gain: number | null; maxAltitude: number | null },
+  tripName: string
+): Promise<{
+  warnings: { severity: 'critical' | 'high' | 'moderate'; message: string; action: string }[];
+  recommendations: string[];
+  layering: { base: string; summit: string; strategy: string } | null;
+  summitWeather: { tempHigh: number; tempLow: number; conditions: string } | null;
+} | null> {
+  try {
+    const input = {
+      weather: {
+        type: weather.type,
+        tempHigh: weather.tempHigh,
+        tempLow: weather.tempLow,
+        precipitation: weather.precipitation,
+        snowDays: weather.distribution?.snowDays,
+        rainyDays: weather.distribution?.rainyDays,
+      },
+      elevation: {
+        gain: elevationInfo.gain,
+        maxAltitude: elevationInfo.maxAltitude,
+      },
+      trip: {
+        name: tripName,
+        duration: '',
+        terrain: '',
+      },
+    };
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: WEATHER_SKILL },
+        { role: 'user', content: JSON.stringify(input) },
+      ],
+      temperature: 0.3,
+      response_format: { type: 'json_object' },
+      max_tokens: 1000,
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) return null;
+
+    const result = JSON.parse(content);
+    return {
+      warnings: result.warnings || [],
+      recommendations: result.recommendations || [],
+      layering: result.layering || null,
+      summitWeather: result.summitWeather || null,
+    };
+  } catch (error) {
+    console.error('Weather recommendations error:', error);
+    return null;
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const { location, region, timeOfYear, plannedDate, elevation } = await request.json();
@@ -683,26 +767,32 @@ export async function POST(request: Request) {
 
     weather.location = searchQuery;
 
-    // Add elevation-based warnings if elevation data provided
+    // Add elevation info and generate LLM-powered recommendations
     if (elevation) {
       const elevationInfo = parseElevationInfo(elevation);
       if (elevationInfo.gain && elevationInfo.gain >= 500) {
-        const elevationWarnings = generateElevationWarnings(
-          weather.tempHigh,
-          elevationInfo,
-          weather.precipitation
-        );
-
-        if (elevationWarnings.length > 0) {
-          weather.warnings = [...(weather.warnings || []), ...elevationWarnings];
-        }
-
         // Add elevation info to weather for widget display
         weather.elevationRange = {
           gain: elevationInfo.gain,
           maxAltitude: elevationInfo.maxAltitude,
           summitTemp: Math.round(weather.tempHigh - (elevationInfo.gain / 1000) * LAPSE_RATE),
         };
+
+        // Generate LLM-powered recommendations
+        const llmResult = await generateWeatherRecommendations(
+          weather,
+          elevationInfo,
+          location || region
+        );
+
+        if (llmResult) {
+          weather.warnings = llmResult.warnings;
+          weather.recommendations = llmResult.recommendations;
+          weather.layering = llmResult.layering;
+          if (llmResult.summitWeather) {
+            weather.elevationRange.summitTemp = llmResult.summitWeather.tempHigh;
+          }
+        }
       }
     }
 

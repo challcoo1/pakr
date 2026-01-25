@@ -64,8 +64,17 @@ interface WeatherWidgetProps {
       summitTemp: number;
     };
     source?: 'mountain-forecast' | 'open-meteo';
-    warnings?: string[];
+    warnings?: {
+      severity: 'critical' | 'high' | 'moderate';
+      message: string;
+      action: string;
+    }[];
     recommendations?: string[];
+    layering?: {
+      base: string;
+      summit: string;
+      strategy: string;
+    };
   } | null;
   elevation?: string; // e.g., "1,500m - 2,400m"
   loading?: boolean;
@@ -343,14 +352,34 @@ export default function WeatherWidget({ weather, elevation, loading }: WeatherWi
             </div>
           )}
 
-          {/* Forecast: show warnings */}
-          {weather.type === 'forecast' && weather.warnings && weather.warnings.length > 0 && (
+          {/* Show warnings (all weather types) */}
+          {weather.warnings && weather.warnings.length > 0 && (
             <div className="weather-warnings">
               {weather.warnings.map((warning, idx) => (
-                <div key={idx} className="weather-warning">
-                  {warning}
+                <div key={idx} className={`weather-warning weather-warning-${warning.severity}`}>
+                  <div className="weather-warning-message">
+                    <span className="weather-warning-severity">{warning.severity}</span>
+                    {warning.message}
+                  </div>
+                  <div className="weather-warning-action">{warning.action}</div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Layering strategy */}
+          {weather.layering && (
+            <div className="weather-layering">
+              <div className="weather-layering-header">Layering Strategy</div>
+              <div className="weather-layering-row">
+                <span className="weather-layering-label">Base:</span>
+                <span>{weather.layering.base}</span>
+              </div>
+              <div className="weather-layering-row">
+                <span className="weather-layering-label">Summit:</span>
+                <span>{weather.layering.summit}</span>
+              </div>
+              <div className="weather-layering-strategy">{weather.layering.strategy}</div>
             </div>
           )}
 
