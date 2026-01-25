@@ -40,17 +40,18 @@ export const getFlagUrl = (code: string) =>
   `https://flagcdn.com/24x18/${code.toLowerCase()}.png`;
 
 // Category display configuration for gear portfolio
-export const CATEGORY_CONFIG: Record<string, { label: string; icon: string }> = {
-  'footwear': { label: 'FOOTWEAR', icon: '👟' },
-  'clothing_base': { label: 'BASE LAYERS', icon: '🧵' },
-  'clothing_mid': { label: 'MID LAYERS', icon: '🧥' },
-  'clothing_outer': { label: 'OUTER LAYERS', icon: '🧥' },
-  'clothing_accessories': { label: 'ACCESSORIES', icon: '🧤' },
-  'backpacks': { label: 'BACKPACKS', icon: '🎒' },
-  'shelter': { label: 'SHELTER', icon: '⛺' },
-  'sleep': { label: 'SLEEP SYSTEM', icon: '🛏️' },
-  'climbing': { label: 'CLIMBING GEAR', icon: '🧗' },
-  'safety': { label: 'SAFETY & NAVIGATION', icon: '🧭' },
-  'cooking': { label: 'COOKING', icon: '🍳' },
-  'other': { label: 'OTHER', icon: '📦' },
+// Icons are now SVG components - use getCategoryIcon() from components/CategoryIcons.tsx
+export const CATEGORY_CONFIG: Record<string, { label: string }> = {
+  'footwear': { label: 'FOOTWEAR' },
+  'clothing_base': { label: 'BASE LAYERS' },
+  'clothing_mid': { label: 'MID LAYERS' },
+  'clothing_outer': { label: 'OUTER LAYERS' },
+  'clothing_accessories': { label: 'ACCESSORIES' },
+  'backpacks': { label: 'BACKPACKS' },
+  'shelter': { label: 'SHELTER' },
+  'sleep': { label: 'SLEEP SYSTEM' },
+  'climbing': { label: 'CLIMBING GEAR' },
+  'safety': { label: 'SAFETY & NAVIGATION' },
+  'cooking': { label: 'COOKING' },
+  'other': { label: 'OTHER' },
 };

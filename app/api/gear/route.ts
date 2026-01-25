@@ -4,18 +4,9 @@ import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { normalizeName } from '@/lib/normalize';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-// Normalize a gear name for matching to prevent duplicates
-function normalizeName(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[''`]/g, '')        // Remove apostrophes
-    .replace(/[^a-z0-9\s]/g, ' ') // Replace other punctuation with space
-    .replace(/\s+/g, ' ')         // Collapse multiple spaces
-    .trim();
-}
 
 function loadSkill(): string {
   try {

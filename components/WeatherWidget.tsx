@@ -1,28 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-
-interface WeatherDay {
-  date: string;
-  tempHigh: number;
-  tempLow: number;
-  precipitation: number;
-  condition?: string;
-}
-
-interface WeatherDistribution {
-  month: string;
-  tempMean: number;
-  tempStdDev: number;
-  tempMin: number;
-  tempMax: number;
-  precipMean: number;
-  precipStdDev: number;
-  snowDays?: number;
-  rainyDays?: number;
-  avgSnowfall?: number;
-  sunnyDays?: number;
-}
+import { SunIcon, CloudSunIcon, RainIcon, WindIcon, SnowIcon, WarningIcon, getWeatherIcon } from './WeatherIcons';
+import { WeatherDay, WeatherDistribution } from '@/types';
 
 interface ElevationWeather {
   elevation: number;
@@ -285,7 +265,7 @@ export default function WeatherWidget({ weather, elevation, loading }: WeatherWi
       >
         <div className="weather-compact-summary">
           <span className="weather-compact-icon">
-            {weather.precipitation >= 50 ? '🌧' : weather.precipitation >= 25 ? '⛅' : '☀'}
+            {getWeatherIcon(weather.precipitation, 20)}
           </span>
           <span className="weather-compact-temps">
             <strong>{weather.tempHigh}°</strong>
@@ -294,7 +274,8 @@ export default function WeatherWidget({ weather, elevation, loading }: WeatherWi
           <span className="weather-compact-desc">{weather.description}</span>
           {summitTemp !== null && (
             <span className={`weather-compact-summit ${hasSignificantElevationDiff ? 'weather-summit-warning' : ''}`}>
-              {hasSignificantElevationDiff ? '⚠ ' : ''}Summit: {summitTemp}°
+              {hasSignificantElevationDiff && <WarningIcon size={12} className="inline-block mr-1" />}
+              Summit: {summitTemp}°
             </span>
           )}
         </div>
@@ -331,12 +312,14 @@ export default function WeatherWidget({ weather, elevation, loading }: WeatherWi
                     <div className="weather-elevation-details">
                       {band.wind > 0 && (
                         <span className="weather-wind">
+                          <WindIcon size={12} className="inline-block mr-1" />
                           {band.wind}km/h {band.windDirection}
                         </span>
                       )}
                       {band.snow > 0 && (
                         <span className="weather-snow">
-                          {band.snow}cm snow
+                          <SnowIcon size={12} className="inline-block mr-1" />
+                          {band.snow}cm
                         </span>
                       )}
                       <span className="weather-elevation-cond">{band.conditions}</span>

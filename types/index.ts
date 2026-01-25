@@ -43,19 +43,42 @@ export interface TripAnalysis {
 export interface UserGearEntry {
   input: string;
   status: 'ideal' | 'suitable' | 'adequate' | 'unsuitable' | 'empty';
+  matchLevel?: 'excellent' | 'good' | 'adequate' | 'poor';
   reasons: string[];
+  specs?: string;
   weightG?: number | null;
   weightEstimated?: boolean;
+}
+
+export interface SystemCheck {
+  systemScore: number;
+  systemLevel: 'excellent' | 'good' | 'fair' | 'poor';
+  summary: string;
+  compatibilityNotes: { items: string[]; status: string; note: string }[];
+  warnings: { items: string[]; issue: string; suggestion: string }[];
 }
 
 export interface ProductMatch {
   id?: string;
   name: string;
   brand: string;
+  category?: string;
+  subcategory?: string;
+  gender?: string;
+  imageUrl?: string;
+  description?: string;
+  productUrl?: string;
+  reviews?: ExternalReview[];
   specs: string;
   source?: 'database' | 'online';
   isNew?: boolean;
   weightG?: number | null;
+}
+
+export interface ExternalReview {
+  source: string;
+  url: string;
+  rating?: string;
 }
 
 export interface CommunityRating {
@@ -68,6 +91,7 @@ export interface WeatherDay {
   tempHigh: number;
   tempLow: number;
   precipitation: number;
+  condition?: string;
 }
 
 export interface WeatherDistribution {
@@ -78,6 +102,10 @@ export interface WeatherDistribution {
   tempMax: number;
   precipMean: number;
   precipStdDev: number;
+  snowDays?: number;
+  rainyDays?: number;
+  avgSnowfall?: number;
+  sunnyDays?: number;
 }
 
 export interface WeatherData {
@@ -123,7 +151,8 @@ export interface Country {
 
 export interface TripConfirm {
   place: string;
-  timeOfYear: string;
+  plannedDate?: string;  // Date picker value (actual date)
+  timeOfYear?: string;   // Extracted from search query (e.g., "January", "Summer")
   activity: string;
   duration: string;
 }
@@ -140,11 +169,7 @@ export interface GearItem {
   imageUrl?: string;
   description?: string;
   productUrl?: string;
-  reviews?: {
-    rating?: number;
-    count?: number;
-    summary?: string;
-  };
+  reviews?: ExternalReview[];
   specs?: string;
   notes?: string;
   addedAt: string;

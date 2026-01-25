@@ -1,16 +1,7 @@
 // app/api/trips/route.ts
 
 import { NextResponse } from 'next/server';
-
-// Normalize a gear name for matching to prevent duplicates
-function normalizeName(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[''`]/g, '')        // Remove apostrophes
-    .replace(/[^a-z0-9\s]/g, ' ') // Replace other punctuation with space
-    .replace(/\s+/g, ' ')         // Collapse multiple spaces
-    .trim();
-}
+import { normalizeName } from '@/lib/normalize';
 
 async function getDb() {
   const { sql } = await import('@/lib/db');
@@ -22,22 +13,33 @@ async function getAuth() {
   return auth;
 }
 
-// GET - fetch user's trips
-export async function GET() {
+// GET - fetch user's trips with pagination
+export async function GET(request: Request) {
   try {
     const sql = await getDb();
     const auth = await getAuth();
     const session = await auth();
 
     if (!session?.user?.email) {
-      return NextResponse.json({ trips: [] });
+      return NextResponse.json({ trips: [], total: 0, page: 1, limit: 20, totalPages: 0 });
     }
 
     const userResult = await sql`SELECT id FROM users WHERE email = ${session.user.email}`;
     if (!userResult[0]) {
-      return NextResponse.json({ trips: [] });
+      return NextResponse.json({ trips: [], total: 0, page: 1, limit: 20, totalPages: 0 });
     }
     const userId = userResult[0].id;
+
+    // Parse pagination params
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20')));
+    const offset = (page - 1) * limit;
+
+    // Get total count
+    const countResult = await sql`SELECT COUNT(*) as total FROM user_trips WHERE user_id = ${userId}`;
+    const total = parseInt(countResult[0]?.total || '0');
+    const totalPages = Math.ceil(total / limit);
 
     const trips = await sql`
       SELECT
@@ -59,6 +61,7 @@ export async function GET() {
       FROM user_trips ut
       WHERE ut.user_id = ${userId}
       ORDER BY ut.created_at DESC
+      LIMIT ${limit} OFFSET ${offset}
     `;
 
     return NextResponse.json({
@@ -86,10 +89,14 @@ export async function GET() {
         maxElevation: t.max_elevation,
         conditionsEncountered: t.conditions_encountered,
       })),
+      total,
+      page,
+      limit,
+      totalPages,
     });
   } catch (error) {
     console.error('Error fetching trips:', error);
-    return NextResponse.json({ trips: [], error: String(error) });
+    return NextResponse.json({ trips: [], total: 0, page: 1, limit: 20, totalPages: 0, error: String(error) });
   }
 }
 
@@ -142,46 +149,78 @@ export async function POST(request: Request) {
     `;
     const tripId = tripResult[0].id;
 
-    // Add gear to the trip
+    // Add gear to the trip using batch operations to avoid N+1 queries
     if (gear && gear.length > 0) {
-      for (const g of gear) {
-        await sql`
-          INSERT INTO trip_gear (trip_id, gear_catalog_id, user_gear_id, gear_name, gear_category, is_owned, is_recommended)
-          VALUES (
-            ${tripId},
-            ${g.catalogId || null},
-            ${g.userGearId || null},
-            ${g.name},
-            ${g.category || null},
-            ${g.isOwned || false},
-            ${g.isRecommended || false}
-          )
+      // Step 1: Batch insert all trip_gear records
+      const tripGearValues = gear.map((g: any) => ({
+        tripId,
+        catalogId: g.catalogId || null,
+        userGearId: g.userGearId || null,
+        name: g.name,
+        category: g.category || null,
+        isOwned: g.isOwned || false,
+        isRecommended: g.isRecommended || false,
+      }));
+
+      // Insert trip_gear in batch using unnest
+      await sql`
+        INSERT INTO trip_gear (trip_id, gear_catalog_id, user_gear_id, gear_name, gear_category, is_owned, is_recommended)
+        SELECT * FROM unnest(
+          ${tripGearValues.map((v: any) => v.tripId)}::uuid[],
+          ${tripGearValues.map((v: any) => v.catalogId)}::uuid[],
+          ${tripGearValues.map((v: any) => v.userGearId)}::uuid[],
+          ${tripGearValues.map((v: any) => v.name)}::text[],
+          ${tripGearValues.map((v: any) => v.category)}::text[],
+          ${tripGearValues.map((v: any) => v.isOwned)}::boolean[],
+          ${tripGearValues.map((v: any) => v.isRecommended)}::boolean[]
+        )
+      `;
+
+      // Step 2: Handle owned gear - add to user's portfolio
+      const ownedGear = gear.filter((g: any) => g.isOwned && g.name);
+      if (ownedGear.length > 0) {
+        // Get normalized names for lookup
+        const normalizedNames = ownedGear.map((g: any) => normalizeName(g.name));
+
+        // Batch lookup existing catalog entries
+        const existingCatalog = await sql`
+          SELECT id, normalized_name FROM gear_catalog
+          WHERE normalized_name = ANY(${normalizedNames})
         `;
+        const existingMap = new Map(existingCatalog.map((r: any) => [r.normalized_name, r.id]));
 
-        // Also add owned gear to user's portfolio
-        if (g.isOwned && g.name) {
-          // Find or create in gear_catalog using normalized name
-          const normalizedGearName = normalizeName(g.name);
-          let catalogResult = await sql`
-            SELECT id FROM gear_catalog WHERE normalized_name = ${normalizedGearName} LIMIT 1
+        // Find gear that needs to be created
+        const toCreate = ownedGear.filter((g: any) => !existingMap.has(normalizeName(g.name)));
+
+        // Batch insert new catalog entries
+        if (toCreate.length > 0) {
+          const newCatalogEntries = await sql`
+            INSERT INTO gear_catalog (name, normalized_name, category)
+            SELECT * FROM unnest(
+              ${toCreate.map((g: any) => g.name)}::text[],
+              ${toCreate.map((g: any) => normalizeName(g.name))}::text[],
+              ${toCreate.map((g: any) => g.category || null)}::text[]
+            )
+            RETURNING id, normalized_name
           `;
+          newCatalogEntries.forEach((r: any) => existingMap.set(r.normalized_name, r.id));
+        }
 
-          let catalogId;
-          if (catalogResult[0]) {
-            catalogId = catalogResult[0].id;
-          } else {
-            const newCatalog = await sql`
-              INSERT INTO gear_catalog (name, normalized_name, category)
-              VALUES (${g.name}, ${normalizedGearName}, ${g.category || null})
-              RETURNING id
-            `;
-            catalogId = newCatalog[0].id;
-          }
+        // Batch insert user_gear entries
+        const userGearValues = ownedGear.map((g: any) => ({
+          userId,
+          gearId: existingMap.get(normalizeName(g.name)),
+          category: g.category || null,
+        })).filter((v: any) => v.gearId);
 
-          // Add to user_gear if not already there
+        if (userGearValues.length > 0) {
           await sql`
             INSERT INTO user_gear (user_id, gear_id, category)
-            VALUES (${userId}, ${catalogId}, ${g.category || null})
+            SELECT * FROM unnest(
+              ${userGearValues.map((v: any) => v.userId)}::uuid[],
+              ${userGearValues.map((v: any) => v.gearId)}::uuid[],
+              ${userGearValues.map((v: any) => v.category)}::text[]
+            )
             ON CONFLICT DO NOTHING
           `;
         }
@@ -248,18 +287,26 @@ export async function PATCH(request: Request) {
       WHERE id = ${tripId} AND user_id = ${userId}
     `;
 
-    // Update gear usage if provided
+    // Update gear usage if provided - batch update to avoid N+1
     if (gearUpdates && Array.isArray(gearUpdates)) {
-      for (const gear of gearUpdates) {
-        if (gear.id) {
-          await sql`
-            UPDATE trip_gear SET
-              was_used = COALESCE(${gear.wasUsed}, was_used),
-              would_bring_again = COALESCE(${gear.wouldBringAgain}, would_bring_again),
-              usage_notes = COALESCE(${gear.usageNotes || null}, usage_notes)
-            WHERE id = ${gear.id}
-          `;
-        }
+      const validUpdates = gearUpdates.filter((g: any) => g.id);
+      if (validUpdates.length > 0) {
+        // Use a CTE with unnest to batch update
+        await sql`
+          UPDATE trip_gear AS tg SET
+            was_used = COALESCE(updates.was_used, tg.was_used),
+            would_bring_again = COALESCE(updates.would_bring_again, tg.would_bring_again),
+            usage_notes = COALESCE(updates.usage_notes, tg.usage_notes)
+          FROM (
+            SELECT * FROM unnest(
+              ${validUpdates.map((g: any) => g.id)}::uuid[],
+              ${validUpdates.map((g: any) => g.wasUsed ?? null)}::boolean[],
+              ${validUpdates.map((g: any) => g.wouldBringAgain ?? null)}::boolean[],
+              ${validUpdates.map((g: any) => g.usageNotes || null)}::text[]
+            ) AS t(id, was_used, would_bring_again, usage_notes)
+          ) AS updates
+          WHERE tg.id = updates.id
+        `;
       }
     }
 

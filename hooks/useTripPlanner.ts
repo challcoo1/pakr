@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type {
   TripMatch,
   TripAnalysis,
@@ -10,6 +10,7 @@ import type {
   ProductMatch,
   WeatherData,
   GearRequirement,
+  SystemCheck,
 } from '@/types';
 import { ACTIVITY_TYPES } from '@/types';
 
@@ -42,6 +43,35 @@ export function useTripPlanner({ onGearMatched, session }: UseTripPlannerOptions
   // Weather
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
+
+  // System check
+  const [systemCheck, setSystemCheck] = useState<SystemCheck | null>(null);
+  const [isCheckingSystem, setIsCheckingSystem] = useState(false);
+
+  // Save trip modal
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [plannedDate, setPlannedDate] = useState('');
+  const [isSavingTrip, setIsSavingTrip] = useState(false);
+
+  // Inventory picker
+  const [showInventoryPicker, setShowInventoryPicker] = useState(false);
+  const [userInventory, setUserInventory] = useState<{ id: string; name: string; category: string }[]>([]);
+
+  // Ignored gear (persisted in localStorage)
+  const [ignoredGear, setIgnoredGear] = useState<Set<string>>(new Set());
+
+  // Load ignored gear from localStorage on mount
+  useEffect(() => {
+    const savedIgnored = localStorage.getItem('pakr-ignored-gear');
+    if (savedIgnored) {
+      try {
+        setIgnoredGear(new Set(JSON.parse(savedIgnored)));
+      } catch { /* ignore parse errors */ }
+    }
+  }, []);
+
+  // Check if gear is ignored globally (case-insensitive)
+  const isGearIgnored = (item: string) => ignoredGear.has(item.toLowerCase());
 
   // Extract time of year from query
   const extractTimeOfYear = (query: string): string => {
@@ -481,6 +511,94 @@ export function useTripPlanner({ onGearMatched, session }: UseTripPlannerOptions
     }));
   };
 
+  // Load user's gear inventory
+  const loadUserInventory = async () => {
+    if (!session?.user) return;
+    try {
+      const res = await fetch('/api/gear');
+      const data = await res.json();
+      setUserInventory(data.gear?.map((g: { id: string; name: string; category?: string }) => ({
+        id: g.id,
+        name: g.name,
+        category: g.category || 'Other'
+      })) || []);
+    } catch (error) {
+      console.error('Failed to load inventory:', error);
+    }
+  };
+
+  // Add gear from inventory
+  const handleAddInventoryGear = (gear: { id: string; name: string; category: string }) => {
+    setInventoryGear(prev => [...prev, gear]);
+  };
+
+  // Remove inventory gear from trip
+  const handleRemoveInventoryGear = (id: string) => {
+    setInventoryGear(prev => prev.filter(g => g.id !== id));
+  };
+
+  // Save trip
+  const handleSaveTrip = async () => {
+    if (!trip || !session) return;
+
+    setIsSavingTrip(true);
+    try {
+      const gearList = trip.gear
+        .filter(g => !excludedGear.has(g.item))
+        .map(g => {
+          const entry = userGear[g.item];
+          return {
+            name: entry?.input || g.item,
+            category: g.category,
+            isOwned: entry?.status !== 'empty' && entry?.input,
+            isRecommended: !entry?.input,
+          };
+        }).filter(g => g.isOwned || g.isRecommended);
+
+      const inventoryGearList = inventoryGear.map(g => ({
+        name: g.name,
+        category: g.category,
+        isOwned: true,
+        isRecommended: false,
+        userGearId: g.id,
+      }));
+
+      const missingGear = trip.gear
+        .filter(g => !excludedGear.has(g.item))
+        .filter(g => !userGear[g.item]?.input || userGear[g.item]?.status === 'empty')
+        .map(g => g.item);
+
+      const response = await fetch('/api/trips', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          trip: {
+            name: trip.name,
+            region: trip.region,
+            duration: trip.duration,
+            terrain: trip.terrain,
+            conditions: trip.conditions,
+            grading: trip.grading,
+            hazards: trip.hazards,
+          },
+          gear: [...gearList, ...inventoryGearList],
+          missingGear: missingGear.length > 0 ? missingGear : null,
+          plannedDate: plannedDate || null,
+        }),
+      });
+
+      if (response.ok) {
+        setShowSaveModal(false);
+        setPlannedDate('');
+        window.location.href = '/trips';
+      }
+    } catch (error) {
+      console.error('Failed to save trip:', error);
+    } finally {
+      setIsSavingTrip(false);
+    }
+  };
+
   return {
     // State
     objective,
@@ -503,6 +621,26 @@ export function useTripPlanner({ onGearMatched, session }: UseTripPlannerOptions
     weather,
     weatherLoading,
 
+    // System check
+    systemCheck,
+    isCheckingSystem,
+
+    // Save trip
+    showSaveModal,
+    setShowSaveModal,
+    plannedDate,
+    setPlannedDate,
+    isSavingTrip,
+
+    // Inventory picker
+    showInventoryPicker,
+    setShowInventoryPicker,
+    userInventory,
+
+    // Ignored gear
+    ignoredGear,
+    isGearIgnored,
+
     // Actions
     handleSearch,
     handleSelectTrip,
@@ -518,5 +656,9 @@ export function useTripPlanner({ onGearMatched, session }: UseTripPlannerOptions
     handleRecommend,
     handleSelectProduct,
     handleCloseSearch,
+    loadUserInventory,
+    handleAddInventoryGear,
+    handleRemoveInventoryGear,
+    handleSaveTrip,
   };
 }

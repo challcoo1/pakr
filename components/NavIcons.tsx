@@ -119,3 +119,48 @@ export function MountainIcon({ isActive = false }: NavIconProps) {
     </svg>
   );
 }
+
+export function GlobeIcon({ isActive = false }: NavIconProps) {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="nav-icon"
+      aria-hidden="true"
+    >
+      {/* Main circle - the globe */}
+      <circle
+        cx="12"
+        cy="12"
+        r="9"
+        stroke="currentColor"
+        strokeWidth="1.25"
+      />
+      {/* Vertical meridian */}
+      <ellipse
+        cx="12"
+        cy="12"
+        rx="4"
+        ry="9"
+        stroke="currentColor"
+        strokeWidth="1"
+      />
+      {/* Horizontal latitude lines */}
+      <path
+        d="M4 9.5C6.5 10.5 9 11 12 11C15 11 17.5 10.5 20 9.5"
+        stroke="currentColor"
+        strokeWidth="1"
+        strokeLinecap="round"
+      />
+      <path
+        d="M4 14.5C6.5 13.5 9 13 12 13C15 13 17.5 13.5 20 14.5"
+        stroke="currentColor"
+        strokeWidth="1"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}

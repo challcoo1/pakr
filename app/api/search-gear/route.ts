@@ -7,8 +7,7 @@ import { sql } from '@/lib/db';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { parseWeightGrams } from '@/lib/parse-weight';
-
-console.log('[PAKR] OpenAI key prefix:', process.env.OPENAI_API_KEY?.substring(0, 15) || 'UNDEFINED');
+import { normalizeName } from '@/lib/normalize';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -134,16 +133,14 @@ async function searchDatabase(searchTerm: string) {
 async function saveToDatabase(item: any) {
   try {
     console.log('Saving to DB:', item.name);
-    console.log('  imageUrl:', item.imageUrl || 'NONE');
-    console.log('  reviews:', item.reviews ? JSON.stringify(item.reviews).substring(0, 100) : 'NONE');
 
     // Parse weight from specs
     const weightG = parseWeightGrams(item.specs);
-    console.log('  weight_g:', weightG || 'NOT FOUND');
+    const normalizedName = normalizeName(item.name);
 
-    // Check if already exists
+    // Check if already exists using normalized_name for deduplication
     const existing = await sql`
-      SELECT id FROM gear_catalog WHERE LOWER(name) = ${item.name.toLowerCase()} LIMIT 1
+      SELECT id FROM gear_catalog WHERE normalized_name = ${normalizedName} LIMIT 1
     `;
 
     if (existing[0]) {
@@ -162,9 +159,9 @@ async function saveToDatabase(item: any) {
       `;
       console.log('Updated existing gear:', item.name);
     } else {
-      // Insert new
+      // Insert new with normalized_name for deduplication
       await sql`
-        INSERT INTO gear_catalog (name, manufacturer, category, subcategory, gender, image_url, description, product_url, reviews, specs, weight_g)
+        INSERT INTO gear_catalog (name, manufacturer, category, subcategory, gender, image_url, description, product_url, reviews, specs, weight_g, normalized_name)
         VALUES (
           ${item.name},
           ${item.brand || null},
@@ -176,7 +173,8 @@ async function saveToDatabase(item: any) {
           ${item.productUrl || null},
           ${item.reviews ? JSON.stringify(item.reviews) : null}::jsonb,
           ${JSON.stringify({ raw: item.specs || '' })},
-          ${weightG}
+          ${weightG},
+          ${normalizedName}
         )
       `;
       console.log('Inserted new gear:', item.name);

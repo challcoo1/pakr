@@ -8,6 +8,10 @@
   --burnt: #CC5500;
   --forest: #2C5530;
   --muted: #6B6B6B;
+  --sage: #6B8E5F;
+  --sage-light: rgba(107, 142, 95, 0.15);
+  --terracotta: #C4785A;
+  --sand: #D4C4A8;
   --font-sans: var(--font-sans), 'Helvetica Neue', Helvetica, Arial, sans-serif;
   --font-serif: var(--font-serif), Georgia, 'Times New Roman', serif;
 }
@@ -1327,13 +1331,6 @@ p, .description, .field-note {
 }
 
 /* Historical Weather Distribution */
-:root {
-  --sage: #6B8E5F;
-  --sage-light: rgba(107, 142, 95, 0.15);
-  --terracotta: #C4785A;
-  --sand: #D4C4A8;
-}
-
 .weather-distribution {
   margin-top: 0.75rem;
   padding-top: 0.75rem;
@@ -1691,22 +1688,12 @@ p, .description, .field-note {
   gap: 0.25rem;
 }
 
-.weather-wind::before {
-  content: '💨';
-  font-size: 0.7rem;
-}
-
 .weather-snow {
   color: var(--charcoal);
   font-weight: 500;
   display: flex;
   align-items: center;
   gap: 0.25rem;
-}
-
-.weather-snow::before {
-  content: '❄️';
-  font-size: 0.7rem;
 }
 
 .weather-freezing-level {

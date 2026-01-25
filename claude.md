@@ -188,16 +188,20 @@ app/
 components/
   Header.tsx        # Shared header with nav, user menu
   AnimatedLogo.tsx  # Mountain bar waveform logo
-  NavIcons.tsx      # Organic navigation icons
+  NavIcons.tsx      # Organic navigation icons (backpack, mountain)
+  WeatherIcons.tsx  # Weather SVG icons (sun, cloud, rain, snow, wind)
+  CategoryIcons.tsx # Gear category SVG icons (footwear, shelter, etc.)
   StarRating.tsx    # Rating display component
   PackSummary.tsx   # Pack weight summary
   HistoricalWeatherCurve.tsx  # Bell curve visualization
 hooks/
   useCountry.ts     # Country detection and persistence
+  useTripPlanner.ts # Trip planning state management
 types/
   index.ts          # Shared TypeScript interfaces
 lib/
-  constants.ts      # COUNTRIES, CATEGORY_CONFIG, etc.
+  constants.ts      # COUNTRIES, CATEGORY_CONFIG, getFlagUrl
+  normalize.ts      # normalizeName() for deduplication
   auth.ts           # NextAuth configuration
   db.ts             # Database connection
 ```
@@ -242,3 +246,36 @@ When reviewing the codebase, check for:
 4. Type mismatches between API and frontend
 5. Unused legacy tables that can be dropped
 6. Files exceeding size limits (300 lines for pages)
+7. Emoji usage in formal UI (should be SVG icons)
+8. Duplicate type definitions across files
+9. API key or secret logging
+10. Missing pagination on list endpoints
+
+### Icon Patterns
+- **No emoji in formal UI** - Use SVG icons matching the NavIcons style (thin strokes, no fills, organic feel)
+- Icon components live in `components/WeatherIcons.tsx` and `components/CategoryIcons.tsx`
+- Use helper functions like `getCategoryIcon(category)` and `getWeatherIcon(precipitation)` for dynamic icon selection
+- CATEGORY_CONFIG stores labels only - icons are rendered via React components
+
+### Shared Code Patterns
+- **Utility functions**: Extract duplicated functions to `lib/` (e.g., `lib/normalize.ts` for `normalizeName()`)
+- **Types**: All shared interfaces go in `types/index.ts` - never define types inline in page components
+- **Constants**: `lib/constants.ts` for COUNTRIES, CATEGORY_CONFIG, getFlagUrl, etc.
+- Import from shared locations instead of redefining - reduces page line counts significantly
+
+### PostgreSQL Batch Operations
+- **Batch INSERT**: Use `unnest()` with typed arrays instead of loops
+  ```sql
+  INSERT INTO table (col1, col2)
+  SELECT * FROM unnest($1::text[], $2::text[])
+  ```
+- **Batch UPDATE**: Use CTE with unnest for multi-row updates
+  ```sql
+  UPDATE table AS t SET col = u.col
+  FROM (SELECT * FROM unnest($1::uuid[], $2::text[]) AS t(id, col)) AS u
+  WHERE t.id = u.id
+  ```
+- This pattern reduces N database round-trips to 1
+
+### Type Flexibility
+- When a field can come from different sources with different semantics (e.g., `plannedDate` from date picker vs `timeOfYear` from text parsing), make both optional in the interface rather than forcing one approach
