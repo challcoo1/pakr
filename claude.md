@@ -209,3 +209,36 @@ lib/
 - Neon PostgreSQL database
 - Open-Meteo for weather data
 - No heavy dependencies - prefer vanilla solutions
+
+## Lessons Learned
+
+### Skills Architecture
+- **Skills are GPT prompts** stored in `skills/*/SKILL.md`, not Claude Code slash commands
+- Each skill defines structured JSON input/output for deterministic behavior
+- When AI output is wrong, check which skill file actually generates it (e.g., `trip-analysis` controls elevation, not `trip-search`)
+- Safety-critical features (weather recommendations) should use LLM with structured output schema
+
+### Database Patterns
+- **Incremental migrations**: Add new columns with separate migration scripts, don't modify the base migration for existing databases
+- **Deduplication**: Use `normalized_name` column (lowercase, no punctuation) with unique index to prevent duplicates like "Arc'teryx" vs "Arcteryx"
+- **Avoid N+1 queries**: Always JOIN related data instead of separate queries in loops
+- Run migrations in order: base schema → add columns → cleanup unused tables
+
+### TypeScript Patterns
+- Be consistent with `| null` vs `| undefined` - they're not interchangeable
+- Use `value || undefined` to convert null to undefined when needed
+- Define interfaces for all API responses, not just inline types
+
+### Performance Patterns
+- **Two-phase loading**: Show fast individual results first, then enhance with expensive operations (system compatibility check)
+- **Pagination**: Always add pagination to list endpoints - include `total`, `page`, `limit`, `totalPages` in response
+- Defer risky refactors (splitting 1700-line files) for focused sessions
+
+### Code Review Checklist
+When reviewing the codebase, check for:
+1. Missing database tables/columns that frontend expects
+2. N+1 query patterns in API routes
+3. Duplicate data in catalog tables
+4. Type mismatches between API and frontend
+5. Unused legacy tables that can be dropped
+6. Files exceeding size limits (300 lines for pages)
